@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* White */
+    --foreground: 0 0% 0%; /* Black */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 0 0% 0%; /* Black */
+
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 0 0% 0%; /* Black */
+
+    --primary: 0 0% 0%; /* Black */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 0 0% 95%; /* Light gray */
+    --secondary-foreground: 0 0% 0%; /* Black */
+
+    --muted: 0 0% 95%; /* Light gray */
+    --muted-foreground: 0 0% 40%; /* Darker gray */
+
+    --accent: 0 100% 40%; /* Vasco Red */
+    --accent-foreground: 0 0% 100%; /* White */
+
+    --destructive: 0 100% 40%; /* Vasco Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    --border: 0 0% 85%; /* Light gray border */
+    --input: 0 0% 85%; /* Light gray input */
+    --ring: 0 0% 0%; /* Black ring */
+
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 0 0% 0%; /* Black */
+    --chart-2: 0 0% 100%; /* White */
+    --chart-3: 0 100% 40%; /* Vasco Red */
+    --chart-4: 0 0% 20%; /* Dark Gray */
+    --chart-5: 0 0% 60%; /* Medium Gray */
+  }
+
+  .dark {
+    --background: 0 0% 0%; /* Black */
+    --foreground: 0 0% 100%; /* White */
+
+    --card: 0 0% 5%; /* Very dark gray */
+    --card-foreground: 0 0% 100%; /* White */
+
+    --popover: 0 0% 5%; /* Very dark gray */
+    --popover-foreground: 0 0% 100%; /* White */
+
+    --primary: 0 0% 100%; /* White */
+    --primary-foreground: 0 0% 0%; /* Black */
+
+    --secondary: 0 0% 15%; /* Dark gray */
+    --secondary-foreground: 0 0% 100%; /* White */
+
+    --muted: 0 0% 15%; /* Dark gray */
+    --muted-foreground: 0 0% 70%; /* Light gray */
+
+    --accent: 0 100% 40%; /* Vasco Red */
+    --accent-foreground: 0 0% 100%; /* White */
+
+    --destructive: 0 100% 30%; /* Darker red */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    --border: 0 0% 20%; /* Dark gray border */
+    --input: 0 0% 20%; /* Dark gray input */
+    --ring: 0 0% 80%; /* Light gray ring */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Vasco da Gama inspired diagonal stripe pattern */
+.vasco-pattern {
+  background-image: linear-gradient(135deg, #000000 25%, transparent 25%),
+    linear-gradient(225deg, #000000 25%, transparent 25%), linear-gradient(315deg, #000000 25%, transparent 25%),
+    linear-gradient(45deg, #000000 25%, transparent 25%);
+  background-size: 20px 20px;
+  background-color: #ffffff;
+}
+
+.vasco-header {
+  background: #000000;
+  position: relative;
+  overflow: hidden;
+}
+
+.vasco-header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 49.9%, #cc0000 50%, transparent 50.1%);
+  z-index: 1;
+}
+
+.vasco-card {
+  border: 1px solid #333;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.vasco-card-dark {
+  border: 1px solid #333;
+  background-color: #000000;
+  color: #ffffff;
+}
+
+@layer utilities {
+  .clip-path-polygon-\[0\%_0\%\,_100\%_0\%\,_95\%_100\%\,_0\%_100\%\] {
+    clip-path: polygon(0% 0%, 100% 0%, 95% 100%, 0% 100%);
+  }
+  .clip-path-polygon-\[5\%_0\%\,_100\%_0\%\,_100\%_100\%\,_0\%_100\%\] {
+    clip-path: polygon(5% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+}
