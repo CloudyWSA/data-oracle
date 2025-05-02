@@ -489,4 +489,5 @@ export default function Dashboard({ data }: DashboardProps) {
       </Tabs>
     </div>
   )
+  
 }
