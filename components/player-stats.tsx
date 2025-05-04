@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -34,7 +36,7 @@ interface PlayerStatsProps {
 export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
   const [sortBy, setSortBy] = useState("games")
   const [filterPosition, setFilterPosition] = useState("all")
-  const [localSearchQuery, setLocalSearchQuery] = useState("")
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery || "")
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [filterPatch, setFilterPatch] = useState("all")
@@ -53,33 +55,58 @@ export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
       const matchesPatch = filterPatch === "all" || String(row.patch) === String(filterPatch)
       const matchesLeague =
         filterLeague === "all" ? (showTopLeagues ? topLeagues.includes(row.league) : true) : row.league === filterLeague
-      return matchesPatch && matchesLeague
+      const matchesPosition = filterPosition === "all" || row.position === filterPosition
+      return matchesPatch && matchesLeague && matchesPosition
     })
 
     // Initialize stats for each player
-    data.uniqueValues.players.forEach((player: string) => {
-      stats[player] = {
-        name: player,
-        games: 0,
-        wins: 0,
-        losses: 0,
-        kills: 0,
-        deaths: 0,
-        assists: 0,
-        champions: {},
-        positions: {},
-        damageShare: 0,
-        goldShare: 0,
-        cspm: 0,
-        vspm: 0,
-        dpm: 0,
-      }
-    })
+    if (data.uniqueValues && Array.isArray(data.uniqueValues.players)) {
+      data.uniqueValues.players.forEach((player: string) => {
+        if (typeof player === "string") {
+          stats[player] = {
+            name: player,
+            games: 0,
+            wins: 0,
+            losses: 0,
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+            champions: {},
+            positions: {},
+            damageShare: 0,
+            goldShare: 0,
+            cspm: 0,
+            vspm: 0,
+            dpm: 0,
+          }
+        }
+      })
+    }
 
     // Populate stats
     filteredPlayerData.forEach((game: any) => {
       const player = game.playername
-      if (!player) return
+      if (!player || typeof player !== "string") return
+
+      // Initialize player if not already done
+      if (!stats[player]) {
+        stats[player] = {
+          name: player,
+          games: 0,
+          wins: 0,
+          losses: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          champions: {},
+          positions: {},
+          damageShare: 0,
+          goldShare: 0,
+          cspm: 0,
+          vspm: 0,
+          dpm: 0,
+        }
+      }
 
       stats[player].games++
 
@@ -161,13 +188,16 @@ export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
     })
 
     return Object.values(stats)
-  }, [data, filterPatch, filterLeague, showTopLeagues])
+  }, [data, filterPatch, filterLeague, filterPosition, showTopLeagues, topLeagues])
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
     return playerStats
       .filter((player: any) => {
-        const matchesSearch = player.name.toLowerCase().includes(localSearchQuery.toLowerCase())
+        // Ensure player.name is a string before calling toLowerCase
+        const playerName = player.name && typeof player.name === "string" ? player.name.toLowerCase() : ""
+        const searchTerm = localSearchQuery.toLowerCase()
+        const matchesSearch = playerName.includes(searchTerm)
         const matchesPosition = filterPosition === "all" || player.mainPosition === filterPosition
         return matchesSearch && matchesPosition && player.games > 0
       })
@@ -249,6 +279,10 @@ export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
       },
     ]
   }, [playerDetail])
+
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery)
+  }, [searchQuery])
 
   return (
     <div className="space-y-6">
@@ -347,7 +381,7 @@ export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
           <CardHeader className="flex flex-row items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="bg-vasco-red text-white text-xl">
-                {playerDetail.name.substring(0, 2).toUpperCase()}
+                {typeof playerDetail.name === "string" ? playerDetail.name.substring(0, 2).toUpperCase() : "NA"}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -470,29 +504,37 @@ export default function PlayerStats({ data, searchQuery }: PlayerStatsProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedPlayers.map((player: any, index: number) => (
-                  <TableRow
-                    key={index}
-                    className={`${index % 2 === 0 ? "bg-vasco-black/5" : "bg-white"} cursor-pointer hover:bg-vasco-red/10`}
-                    onClick={() => setSelectedPlayer(player.name)}
-                  >
-                    <TableCell className="font-medium">{player.name}</TableCell>
-                    <TableCell>{player.mainPosition}</TableCell>
-                    <TableCell>{player.games}</TableCell>
-                    <TableCell>{player.winRate.toFixed(1)}%</TableCell>
-                    <TableCell>{player.kda}</TableCell>
-                    <TableCell>
-                      {player.avgKills}/{player.avgDeaths}/{player.avgAssists}
-                    </TableCell>
-                    <TableCell>{player.avgDpm}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <ChampionImage championName={player.mainChampion} size={32} />
-                        <span>{player.mainChampion}</span>
-                      </div>
+                {paginatedPlayers.length > 0 ? (
+                  paginatedPlayers.map((player: any, index: number) => (
+                    <TableRow
+                      key={index}
+                      className={`${index % 2 === 0 ? "bg-vasco-black/5" : "bg-white"} cursor-pointer hover:bg-vasco-red/10`}
+                      onClick={() => setSelectedPlayer(player.name)}
+                    >
+                      <TableCell className="font-medium">{player.name}</TableCell>
+                      <TableCell>{player.mainPosition}</TableCell>
+                      <TableCell>{player.games}</TableCell>
+                      <TableCell>{player.winRate.toFixed(1)}%</TableCell>
+                      <TableCell>{player.kda}</TableCell>
+                      <TableCell>
+                        {player.avgKills}/{player.avgDeaths}/{player.avgAssists}
+                      </TableCell>
+                      <TableCell>{player.avgDpm}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <ChampionImage championName={player.mainChampion} size={32} />
+                          <span>{player.mainChampion}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-4">
+                      No players found matching your filters.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>

@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,10 +22,11 @@ export default function GameAnalysis({ data, searchQuery }: GameAnalysisProps) {
   const [sortBy, setSortBy] = useState("date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [filterLeague, setFilterLeague] = useState("all")
+  const [filterPatch, setFilterPatch] = useState("all")
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
 
   // We'll use a local search query state
-  useState(() => {
+  useEffect(() => {
     setLocalSearchQuery(searchQuery)
   }, [searchQuery])
 
@@ -117,8 +120,9 @@ export default function GameAnalysis({ data, searchQuery }: GameAnalysisProps) {
           (game.redTeam && game.redTeam.toLowerCase().includes(localSearchQuery.toLowerCase()))
 
         const matchesLeague = filterLeague === "all" || game.league === filterLeague
+        const matchesPatch = filterPatch === "all" || String(game.patch) === String(filterPatch)
 
-        return matchesSearch && matchesLeague
+        return matchesSearch && matchesLeague && matchesPatch
       })
       .sort((a: any, b: any) => {
         let comparison = 0
@@ -139,7 +143,7 @@ export default function GameAnalysis({ data, searchQuery }: GameAnalysisProps) {
 
         return sortOrder === "asc" ? comparison : -comparison
       })
-  }, [gameData, localSearchQuery, sortBy, sortOrder, filterLeague])
+  }, [gameData, localSearchQuery, sortBy, sortOrder, filterLeague, filterPatch])
 
   // Selected game for detailed view
   const [selectedGame, setSelectedGame] = useState<string | null>(null)

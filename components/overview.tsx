@@ -23,13 +23,13 @@ export default function Overview({ data }: OverviewProps) {
   // Filter data based on selected filters
   const filteredData = {
     playerData: data.playerData.filter((row: any) => {
-      const matchesPatch = filterPatch === "all" || row.patch === filterPatch
+      const matchesPatch = filterPatch === "all" || String(row.patch) === String(filterPatch)
       const matchesLeague =
         filterLeague === "all" ? (showTopLeagues ? topLeagues.includes(row.league) : true) : row.league === filterLeague
       return matchesPatch && matchesLeague
     }),
     teamData: data.teamData.filter((row: any) => {
-      const matchesPatch = filterPatch === "all" || row.patch === filterPatch
+      const matchesPatch = filterPatch === "all" || String(row.patch) === String(filterPatch)
       const matchesLeague =
         filterLeague === "all" ? (showTopLeagues ? topLeagues.includes(row.league) : true) : row.league === filterLeague
       return matchesPatch && matchesLeague

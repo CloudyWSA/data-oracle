@@ -70,7 +70,7 @@ export default function ChampionImage({ championName, size = 40, className = "" 
         alt={`${championName} champion icon`}
         width={size}
         height={size}
-        className="object-cover"
+        className="object-contain"
         priority={size > 40} // Prioritize loading larger images
       />
     </div>

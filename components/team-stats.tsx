@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -21,12 +21,13 @@ export default function TeamStats({ data, searchQuery }: TeamStatsProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
   const [filterPatch, setFilterPatch] = useState("all")
   const [showTopLeagues, setShowTopLeagues] = useState(false)
+  const [filterLeague, setFilterLeague] = useState("all")
 
   // Define top leagues
   const topLeagues = ["LCK", "LPL", "LEC", "LTA"]
 
   // We'll use a local search query state
-  useState(() => {
+  useEffect(() => {
     setLocalSearchQuery(searchQuery)
   }, [searchQuery])
 
@@ -37,7 +38,9 @@ export default function TeamStats({ data, searchQuery }: TeamStatsProps) {
     // Filter data based on selected filters
     const filteredTeamData = data.teamData.filter((row: any) => {
       const matchesPatch = filterPatch === "all" || String(row.patch) === String(filterPatch)
-      const matchesLeague = showTopLeagues ? topLeagues.includes(row.league) : true
+      const matchesLeague = showTopLeagues
+        ? topLeagues.includes(row.league)
+        : filterLeague === "all" || row.league === filterLeague
       return matchesPatch && matchesLeague
     })
 
@@ -152,7 +155,7 @@ export default function TeamStats({ data, searchQuery }: TeamStatsProps) {
     })
 
     return Object.values(stats)
-  }, [data, filterPatch, showTopLeagues])
+  }, [data, filterPatch, showTopLeagues, topLeagues, filterLeague])
 
   // Calculate most played champions by position for each team
   const teamChampionsByPosition = useMemo(() => {
@@ -169,8 +172,17 @@ export default function TeamStats({ data, searchQuery }: TeamStatsProps) {
       }
     })
 
+    // Filter player data based on selected filters
+    const filteredPlayerData = data.playerData.filter((row: any) => {
+      const matchesPatch = filterPatch === "all" || String(row.patch) === String(filterPatch)
+      const matchesLeague = showTopLeagues
+        ? topLeagues.includes(row.league)
+        : filterLeague === "all" || row.league === filterLeague
+      return matchesPatch && matchesLeague
+    })
+
     // Count champions by position for each team
-    data.playerData.forEach((player: any) => {
+    filteredPlayerData.forEach((player: any) => {
       const team = player.teamname
       const position = player.position?.toLowerCase()
       const champion = player.champion
@@ -216,7 +228,7 @@ export default function TeamStats({ data, searchQuery }: TeamStatsProps) {
     })
 
     return result
-  }, [data])
+  }, [data, filterPatch, filterLeague, showTopLeagues, topLeagues])
 
   // Helper function to format time in seconds to MM:SS
   function formatTime(seconds: number) {
