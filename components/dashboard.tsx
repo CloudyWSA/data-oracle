@@ -2,20 +2,20 @@
 "use client"
 
 import { useState, useEffect, lazy, Suspense, useMemo } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
 import { AlertCircle, Gamepad2, Swords } from "lucide-react" // Added Swords icon
-import { Skeleton } from "@/components/ui/skeleton"
-import type { ParticipantData } from "@/types" // Import NEW types
+import { Skeleton } from "../components/ui/skeleton"
+import type { ParticipantData } from "../src/types" // Import NEW types
 
 // Lazy load components
-const Overview = lazy(() => import("@/components/overview"))
-const ChampionStats = lazy(() => import("@/components/champion-stats"))
-const PlayerStats = lazy(() => import("@/components/player-stats"))
-const TeamStats = lazy(() => import("@/components/team-stats"))
-const GameAnalysis = lazy(() => import("@/components/game-analysis"))
-const DraftSimulator = lazy(() => import("@/components/draft-simulator"))
-const Matchups = lazy(() => import("@/components/matchups")) // Add matchups import
+const Overview = lazy(() => import("../components/overview"))
+const ChampionStats = lazy(() => import("../components/champion-stats"))
+const PlayerStats = lazy(() => import("../components/player-stats"))
+const TeamStats = lazy(() => import("../components/team-stats"))
+const GameAnalysis = lazy(() => import("../components/game-analysis"))
+const DraftSimulator = lazy(() => import("../components/draft-simulator"))
+const Matchups = lazy(() => import("../components/matchups")) // Add matchups import
 
 interface DashboardProps {
   data: ParticipantData[] // Use the specific type
@@ -33,7 +33,6 @@ const TabLoading = () => (
   </div>
 )
 
-// ... Keep all the existing constants and helper functions exactly as they were ...
 const DRAFT_SLOT_ORDER_MAP: { [order: number]: string } = {
   1: "B1 Ban 1",
   2: "R1 Ban 1",
@@ -74,7 +73,6 @@ const DRAFT_PICK_ORDER_TO_LABEL: { [order: number]: string } = {
   20: "R5",
 }
 
-// Helper function (keep existing one if used elsewhere, or use the map above)
 const getGlobalPickOrder = (side: string, teamPickOrder: number | null): number | null => {
   if (teamPickOrder === null || teamPickOrder < 1 || teamPickOrder > 5) return null
   if (side === "Blue") {
@@ -116,7 +114,6 @@ const TOP_LEAGUES = ["LPL", "LCK", "LEC"] // Define top leagues consistently
 
 export default function Dashboard({ data }: DashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
-  // processedData stores unique values and separated player/team data (if needed elsewhere)
   const [processedData, setProcessedData] = useState<{
     playerData: ParticipantData[]
     teamData: any[]
@@ -137,15 +134,12 @@ export default function Dashboard({ data }: DashboardProps) {
   } | null>(null)
   const [processingError, setProcessingError] = useState<string | null>(null)
 
-  // Add state for combined normalized data (player + team rows)
   const [normalizedDataState, setNormalizedDataState] = useState<ParticipantData[] | null>(null)
 
-  // Add filter state at the dashboard level
   const [filterPatch, setFilterPatch] = useState("all")
   const [filterLeague, setFilterLeague] = useState("all")
   const [showTopLeagues, setShowTopLeagues] = useState(false)
 
-  // ... Keep all the existing useEffect and useMemo logic exactly as it was ...
   // Initial processing
   useEffect(() => {
     if (!data || data.length === 0) {
@@ -200,7 +194,6 @@ export default function Dashboard({ data }: DashboardProps) {
         )
       }
 
-      // ... Keep all the existing data processing logic ...
       // ---> Separate player/team data and gather unique values for processedData state <---
       const champions = new Set<string>()
       const players = new Set<string>()
@@ -286,7 +279,6 @@ export default function Dashboard({ data }: DashboardProps) {
     }
   }, [data])
 
-  // ... Keep all the existing filtering and calculation logic ...
 
   // --- Filter the *combined* normalized data based on the current filters ---
   // This is used for calculations that need BOTH player and team rows (like ChampionStats bans)
