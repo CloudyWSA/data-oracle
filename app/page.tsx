@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
 import { AlertCircle, Bug, Database } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import FileUploader from "@/components/file-uploader"
-import Dashboard from "@/components/dashboard"
-import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { useToast } from "../hooks/use-toast"
+import FileUploader from "../components/file-uploader"
+import Dashboard from "../components/dashboard"
+import { Button } from "../components/ui/button"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion"
 
 export default function Home() {
   const [data, setData] = useState<any[] | null>(null)
