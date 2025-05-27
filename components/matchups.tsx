@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { Badge } from "../components/ui/badge"
+import { Progress } from "../components/ui/progress"
+import { Alert, AlertDescription } from "../components/ui/alert"
+import { Switch } from "../components/ui/switch"
+import { Label } from "../components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import ChampionImage from "./champion-image"
 import {
   Swords,
@@ -37,7 +37,7 @@ import {
   TreePine,
   Gamepad2,
 } from "lucide-react"
-import type { ParticipantData } from "@/types"
+import type { ParticipantData } from "../types"
 
 interface MatchupsProps {
   data: {
@@ -1498,7 +1498,7 @@ export default function Matchups({
                                 <div className="text-xl font-bold text-black">
                                   {(matchupStats.champion1Stats.avgGoldAt15 / 1000).toFixed(1)}k
                                 </div>
-                                <div className="text-xs text-gray-600">Gold @ 15min</div>
+                                <div className="text-xs text-gray-600">Gold .. 15min</div>
                               </div>
                             </div>
                           </div>
@@ -1562,7 +1562,7 @@ export default function Matchups({
                                 <div className="text-xl font-bold text-gray-700">
                                   {(matchupStats.champion2Stats.avgGoldAt15 / 1000).toFixed(1)}k
                                 </div>
-                                <div className="text-xs text-gray-600">Gold @ 15min</div>
+                                <div className="text-xs text-gray-600">Gold .. 15min</div>
                               </div>
                             </div>
                           </div>

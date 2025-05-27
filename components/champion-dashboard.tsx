@@ -1,8 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader } from "../components/ui/dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import {
   BarChart,
   Bar,
@@ -21,7 +21,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "../components/ui/badge"
 import ChampionImage from "./champion-image"
 import {
   Shield,
@@ -38,7 +38,7 @@ import {
   Zap, // Added for Dmg Share icon
   Coins, // Added for Gold Share icon
 } from "lucide-react"
-import type { ChampionStat, SynergyDataMap, MatchupDataMap, MatchupData, SynergyData } from "@/types" // Import types
+import type { ChampionStat, SynergyDataMap, MatchupDataMap, MatchupData, SynergyData } from "../types" // Import types
 
 // Helper Function for Win Rate Color
 const getWinRateColor = (winRate: number | undefined): string => {

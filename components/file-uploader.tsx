@@ -4,10 +4,10 @@ import type React from "react"
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { Upload, FileSpreadsheet, AlertCircle, Bug, Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Button } from "../components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
+import { Progress } from "../components/ui/progress"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion"
 import Papa from "papaparse"
 
 interface FileUploaderProps {

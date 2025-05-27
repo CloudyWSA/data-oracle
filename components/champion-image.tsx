@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { getChampionImageUrl } from "@/lib/data-dragon"
+import { getChampionImageUrl } from "../lib/data-dragon"
 
 interface ChampionImageProps {
   championName: string
