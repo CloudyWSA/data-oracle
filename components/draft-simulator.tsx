@@ -1,26 +1,51 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
-import { Button } from "../components/ui/button"
-import { Badge } from "../components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { Input } from "../components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge" // Still used for simple role badges on picks
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Search, X, RefreshCw, Swords, TrendingUp, Star, Ban, ArrowUpDown } from "lucide-react"
 import ChampionImage from "./champion-image" // Ensure this component exists and works as expected
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
-import { cn } from "../lib/utils" // Ensure this utility exists
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils" // Ensure this utility exists
 
-// --- TYPE DEFINITIONS ---
+// --- TYPE DEFINITIONS (Unchanged) ---
 interface ChampionData {
   name: string
   mainPosition?: string
   winRate?: number
   pickRate?: number
-  patch?: string // Added patch to champion data
-  league?: string // Added league to champion data
+  patch?: string
+  league?: string
   banRate?: number
+  laneCounter?: {
+    isLaneCounter: boolean
+    laneCounterScore: number
+    details: Array<{
+      champion: string
+      position?: string
+      winRateVs: number
+    }>
+  }
+  teamCounter?: {
+    isTeamCounter: boolean
+    teamCounterScore: number
+    details: Array<{
+      champion: string
+      position?: string
+      winRateVs: number
+    }>
+  }
+  roleStats?: {
+    [position: string]: {
+      pickRate: number
+      winRate: number
+      gamesPlayed?: number
+    }
+  }
 }
 interface SynergyPairData {
   winRate: number
@@ -51,12 +76,12 @@ interface DraftSimulatorProps {
   allSynergyData: SynergyDataMap
   matchupData: MatchupDataMap
   draftPositionPickData: DraftPositionPickData
-  patches?: string[] // Prop for available patches
-  leagues?: string[] // Prop for available leagues
+  patches?: string[]
+  leagues?: string[]
 }
 // --- END TYPE DEFINITIONS ---
 
-// --- CONSTANTS ---
+// --- CONSTANTS (Unchanged) ---
 const DRAFT_POSITIONS = [
   // Ban Phase 1
   { team: "blue", phase: "ban", order: 1, label: "B Ban 1", teamBanIndex: 0 },
@@ -86,15 +111,14 @@ const DRAFT_POSITIONS = [
 const STANDARD_POSITIONS = ["top", "jng", "mid", "bot", "sup"]
 type PickInfo = { champion: string; position: string }
 
-// Thresholds (Keep existing)
 const MIN_ALLY_SYNERGY_PICK_RATE = 1.5
 const MIN_ALLY_SYNERGY_WIN_RATE = 49.0
 const MIN_COUNTER_WIN_RATE = 51.0
 const DRAFT_SLOT_PICK_RATE_LOW_THRESHOLD = 1.0
 const DRAFT_SLOT_PICK_RATE_HIGH_THRESHOLD = 10.0
-const PREMIUM_PICK_ALLY_SCORE_THRESHOLD = 51 * 2.0 // Example, adjust as needed
-const PREMIUM_PICK_COUNTER_SCORE_THRESHOLD = 52.0 // Example, adjust as needed
-const PREMIUM_PICK_SLOT_RATE_THRESHOLD = 3.0 // Example, adjust as needed
+const PREMIUM_PICK_ALLY_SCORE_THRESHOLD = 51 * 2.0
+const PREMIUM_PICK_COUNTER_SCORE_THRESHOLD = 52.0
+const PREMIUM_PICK_SLOT_RATE_THRESHOLD = 3.0
 // --- END CONSTANTS ---
 
 export default function DraftSimulator({
@@ -102,10 +126,10 @@ export default function DraftSimulator({
   allSynergyData = {},
   matchupData = {},
   draftPositionPickData = { championPickCounts: {}, totalPicksPerSlot: {} },
-  patches = [], // Default empty array
-  leagues = [], // Default empty array
+  patches = [],
+  leagues = [],
 }: DraftSimulatorProps) {
-  // --- STATE HOOKS ---
+  // --- STATE HOOKS (Unchanged) ---
   const [draftState, setDraftState] = useState<{
     currentStep: number
     blueBans: string[]
@@ -122,10 +146,10 @@ export default function DraftSimulator({
 
   const [searchQuery, setSearchQuery] = useState("")
   const [filterPosition, setFilterPosition] = useState("all")
-  const [filterPatch, setFilterPatch] = useState("all") // State for patch filter
-  const [filterLeague, setFilterLeague] = useState("all") // State for league filter
+  const [filterPatch, setFilterPatch] = useState("all")
+  const [filterLeague, setFilterLeague] = useState("all")
 
-  // --- MEMOIZED VALUES ---
+  // --- MEMOIZED VALUES (Logic Unchanged) ---
   const currentDraftPosition = useMemo(() => {
     if (draftState.currentStep > DRAFT_POSITIONS.length) return null
     return DRAFT_POSITIONS.find((pos) => pos.order === draftState.currentStep) || null
@@ -141,7 +165,6 @@ export default function DraftSimulator({
     )
   }, [draftState.bluePicks, draftState.redPicks])
 
-  // Updated availableChampions to include patch and league filters
   const availableChampions = useMemo(() => {
     const unavailableChampions = new Set([...bannedChampions, ...pickedChampions])
     if (!Array.isArray(allChampions)) {
@@ -151,16 +174,13 @@ export default function DraftSimulator({
 
     return allChampions.filter((c) => {
       if (!c?.name || unavailableChampions.has(c.name)) return false
-      // Apply patch filter if selected and champion has patch data
       if (filterPatch !== "all" && c.patch && c.patch !== filterPatch) return false
-      // Apply league filter if selected and champion has league data
       if (filterLeague !== "all" && c.league && c.league !== filterLeague) return false
       return true
     })
   }, [allChampions, bannedChampions, pickedChampions, filterPatch, filterLeague])
 
   const filteredChampions = useMemo(() => {
-    // For the 'All Champions' tab - uses already filtered availableChampions
     return (
       availableChampions
         .filter((champion) => {
@@ -171,13 +191,12 @@ export default function DraftSimulator({
           const matchesPosition = filterPosition === "all" || champion.mainPosition === filterPosition
           return matchesSearch && matchesPosition
         })
-        // Sort alphabetically by champion name
         .sort((a, b) => a.name.localeCompare(b.name))
     )
   }, [availableChampions, searchQuery, filterPosition])
 
-  // --- Recommendation Logic ---
-  const recommendedChampions = useMemo(() => {
+  // --- Recommendation Logic (Unchanged) ---
+   const recommendedChampions = useMemo(() => {
     if (!currentDraftPosition) return []
 
     const isBlueTeam = currentDraftPosition.team === "blue"
@@ -187,14 +206,13 @@ export default function DraftSimulator({
     const teamPickedChampions = teamPicks.filter((p) => p.champion).map((p) => p.champion)
     const enemyPickedChampions = enemyPicks.filter((p) => p.champion).map((p) => p.champion)
 
-    // Use the *assigned positions* from draftState
     const teamPickedPositions = new Set(teamPicks.filter((p) => p.champion && p.position).map((p) => p.position))
     const enemyPickedPositions = new Set(enemyPicks.filter((p) => p.champion && p.position).map((p) => p.position))
+    
+    const filteredForRecs = availableChampions.filter(champion => 
+      !champion.mainPosition || !teamPickedPositions.has(champion.mainPosition)
+    )
 
-    // Recommendations now use champions already filtered by Patch/League
-    const filteredForRecs = availableChampions
-
-    // --- Ban Phase Recommendations ---
     if (currentDraftPosition.phase === "ban") {
       if (enemyPickedChampions.length === 0) {
         return [...filteredForRecs]
@@ -238,11 +256,9 @@ export default function DraftSimulator({
               enemyPickedChampions.slice(0, 2).join(" & ") + (enemyPickedChampions.length > 2 ? "..." : "")
             reason = `High synergy with enemy (${enemyNames})`
           } else if (overallImpactScore > 50 * 5) {
-            // Example high impact threshold
             reason = "High general impact"
           }
 
-          // Add filter context to ban reason
           let filterInfo = ""
           if (filterPatch !== "all" || filterLeague !== "all") {
             filterInfo = ` (Patch: ${filterPatch !== "all" ? filterPatch : "Any"}, League: ${filterLeague !== "all" ? filterLeague : "Any"})`
@@ -258,32 +274,29 @@ export default function DraftSimulator({
             isPremiumPick: false,
           }
         })
-        // Filter ban candidates based on *enemy assigned positions*
         .filter((c) => !c.mainPosition || !enemyPickedPositions.has(c.mainPosition))
         .sort((a, b) => b.score - a.score)
 
       return banCandidates.slice(0, 5)
     }
 
-    // --- Pick Phase Recommendations ---
     const availablePositions = STANDARD_POSITIONS.filter((pos) => !teamPickedPositions.has(pos))
     const pickOrderLabel = currentDraftPosition
       ? DRAFT_POSITIONS.find((p) => p.order === currentDraftPosition.order)?.label
       : ""
-    const currentPickLabel = pickOrderLabel ? (pickOrderLabel.split(" ")[1] ?? "") : "" // B1, R2 etc.
+    const currentPickLabel = pickOrderLabel ? (pickOrderLabel.split(" ")[1] ?? "") : "" 
 
     const candidateChampions = [...filteredForRecs].filter(
       (champion) =>
         champion.mainPosition &&
-        (filterPosition === "all" || // Or if filter is set to a specific role, prioritize that
+        (filterPosition === "all" || 
           champion.mainPosition === filterPosition ||
-          availablePositions.includes(champion.mainPosition)), // Check if champ's default role fits an open slot
+          availablePositions.includes(champion.mainPosition)),
     )
 
-    // Helper to generate filter context string
     const getFilterContextString = () => {
       if (filterPatch === "all" && filterLeague === "all") return ""
-      let context = " (Based on "
+      let context = " (Data from "
       if (filterPatch !== "all") context += `Patch ${filterPatch}`
       if (filterPatch !== "all" && filterLeague !== "all") context += ", "
       if (filterLeague !== "all") context += `${filterLeague} League`
@@ -293,10 +306,8 @@ export default function DraftSimulator({
     const filterContext = getFilterContextString()
 
     if (teamPickedChampions.length === 0) {
-      // Early pick logic
       return candidateChampions
         .map((champion) => {
-          // Counter logic
           let counterScore = 0
           let avgWinRateVs = 0
           const counterDetails: { champion: string; winRateVs: number; pickRateVs: number }[] = []
@@ -322,15 +333,12 @@ export default function DraftSimulator({
           const finalScore = overallImpactScore + (counterScore > MIN_COUNTER_WIN_RATE ? counterScore : 0)
           let reason = "Strong early pick"
           if (counterScore > MIN_COUNTER_WIN_RATE + 2) reason += ` (Good vs enemy)`
-
-          // Suggest a role based on availability
-          const suggestedRole = availablePositions.includes(champion.mainPosition ?? "")
-            ? champion.mainPosition
-            : availablePositions[0] || champion.mainPosition || ""
+          
+          let suggestedRole = champion.mainPosition ?? ""
 
           return {
             ...champion,
-            recommendReason: reason + filterContext, // Add filter context
+            recommendReason: reason + filterContext,
             score: finalScore,
             synergy: null,
             counter: { score: counterScore, avgWinRateVs: avgWinRateVs, details: counterDetails },
@@ -343,10 +351,8 @@ export default function DraftSimulator({
         .slice(0, 5)
     }
 
-    // Mid/Late pick logic
     const championsWithScores = candidateChampions
       .map((champion) => {
-        // Synergy logic
         const synergyDetails = teamPickedChampions
           .map((allyChamp) => {
             const pairData =
@@ -365,7 +371,6 @@ export default function DraftSimulator({
           validSynergyCount > 0 ? synergyDetails.reduce((sum, d) => sum + d.synergyScore, 0) / validSynergyCount : 0
         const combinedAllyScore = avgAllyWR * avgPickRateTogether
 
-        // Counter logic
         let counterScore = 0
         let avgWinRateVs = 0
         const counterDetails: { champion: string; winRateVs: number; pickRateVs: number }[] = []
@@ -387,21 +392,80 @@ export default function DraftSimulator({
           avgWinRateVs = vsCount > 0 ? vsWinRateSum / vsCount : 0
           counterScore = avgWinRateVs
         }
+        
+        const laneCounterDetails: { champion: string; position?: string; winRateVs: number }[] = []
+        let laneCounterScoreNum = 0
+        let isLaneCounter = false
+        const championPosition = champion.mainPosition || "" // Use mainPosition for logic
+        
+        const enemyLaneOpponents = enemyPicks
+          .filter(p => p.champion && p.position === championPosition)
+          .map(p => p.champion)
+        
+        if (enemyLaneOpponents.length > 0) {
+          let laneWinRateSum = 0
+          let laneMatchupCount = 0
+          enemyLaneOpponents.forEach(enemyChamp => {
+            const matchup = matchupData?.[champion.name]?.[enemyChamp]
+            if (matchup?.winRateVs) {
+              if (matchup.winRateVs >= MIN_COUNTER_WIN_RATE + 2) {
+                laneWinRateSum += matchup.winRateVs
+                laneCounterDetails.push({
+                  champion: enemyChamp,
+                  position: championPosition,
+                  winRateVs: matchup.winRateVs
+                })
+                laneMatchupCount++
+              }
+            }
+          })
+          if (laneMatchupCount > 0) {
+            laneCounterScoreNum = laneWinRateSum / laneMatchupCount
+            isLaneCounter = laneCounterScoreNum >= MIN_COUNTER_WIN_RATE + 2
+          }
+        }
+        
+        const teamCounterDetails: { champion: string; position?: string; winRateVs: number }[] = []
+        let teamCounterScoreNum = 0
+        let isTeamCounter = false
+        const enemyTeamOpponents = enemyPicks
+          .filter(p => p.champion && p.position !== championPosition)
+          .map(p => ({ champion: p.champion, position: p.position }))
+        
+        if (enemyTeamOpponents.length > 0) {
+          let teamWinRateSum = 0
+          let teamMatchupCount = 0
+          enemyTeamOpponents.forEach(enemy => {
+            const matchup = matchupData?.[champion.name]?.[enemy.champion]
+            if (matchup?.winRateVs) {
+              if (matchup.winRateVs >= MIN_COUNTER_WIN_RATE + 1) {
+                teamWinRateSum += matchup.winRateVs
+                teamCounterDetails.push({
+                  champion: enemy.champion,
+                  position: enemy.position,
+                  winRateVs: matchup.winRateVs
+                })
+                teamMatchupCount++
+              }
+            }
+          })
+          if (teamMatchupCount > 0) {
+            teamCounterScoreNum = teamWinRateSum / teamMatchupCount
+            isTeamCounter = teamCounterScoreNum >= MIN_COUNTER_WIN_RATE + 1
+          }
+        }
 
-        // Draft position logic
         const picksInSlot = draftPositionPickData?.championPickCounts?.[champion.name]?.[currentPickLabel] ?? 0
         const totalPicksOverallInSlot = draftPositionPickData?.totalPicksPerSlot?.[currentPickLabel] ?? 0
         const pickRateInSlot = totalPicksOverallInSlot > 0 ? (picksInSlot / totalPicksOverallInSlot) * 100 : 0
         let draftPosContext = ""
         if (totalPicksOverallInSlot > 10) {
-          // Only show if enough data
           if (pickRateInSlot < DRAFT_SLOT_PICK_RATE_LOW_THRESHOLD && pickRateInSlot > 0)
             draftPosContext = `(Rare in ${currentPickLabel})`
           else if (pickRateInSlot > DRAFT_SLOT_PICK_RATE_HIGH_THRESHOLD)
             draftPosContext = `(Common in ${currentPickLabel})`
         }
 
-        // Reason generation
         const reasonParts: string[] = []
         if (combinedAllyScore > MIN_ALLY_SYNERGY_WIN_RATE * MIN_ALLY_SYNERGY_PICK_RATE && synergyDetails.length > 0) {
           const bestAlly = [...synergyDetails].sort(
@@ -414,24 +478,50 @@ export default function DraftSimulator({
           if (bestCounter) reasonParts.push(`Counters ${bestCounter.champion}`)
           else reasonParts.push("Good vs enemy")
         }
-
-        const championDefaultRole = champion.mainPosition ?? ""
-        let suggestedRole = championDefaultRole
-        if (!availablePositions.includes(championDefaultRole) && availablePositions.length > 0) {
-          suggestedRole = availablePositions[0]
-          if (reasonParts.length === 0) {
-            reasonParts.push(`Fits ${suggestedRole.toUpperCase()} role`)
-          } else {
-            reasonParts.push(`(Fits ${suggestedRole.toUpperCase()})`)
-          }
-        } else if (reasonParts.length === 0) {
-          reasonParts.push("Solid role fit")
+        if (isLaneCounter && laneCounterDetails.length > 0) {
+          const bestLaneCounter = [...laneCounterDetails].sort((a, b) => b.winRateVs - a.winRateVs)[0]
+          if (bestLaneCounter) reasonParts.push(`Lane counter vs ${bestLaneCounter.champion}`)
         }
+        if (isTeamCounter && teamCounterDetails.length > 0) {
+          const bestTeamCounter = [...teamCounterDetails].sort((a, b) => b.winRateVs - a.winRateVs)[0]
+          if (bestTeamCounter) reasonParts.push(`Team counter vs ${bestTeamCounter.champion}`)
+        }
+        
+        let suggestedRole = champion.mainPosition ?? ""
+        if (!availablePositions.includes(suggestedRole) && availablePositions.length > 0) {
+            // Try to find an alternative role with good stats if main role is taken
+            const champRoleStats = champion.roleStats || {};
+            let bestAlternativeRole = "";
+            let maxAlternativeScore = 0;
+
+            for (const pos of availablePositions) {
+                if (champRoleStats[pos] && champRoleStats[pos].gamesPlayed && champRoleStats[pos].gamesPlayed > 20) { // Min games played for alt role
+                    const roleScore = (champRoleStats[pos].winRate || 0) * (champRoleStats[pos].pickRate || 0);
+                    if (roleScore > maxAlternativeScore) {
+                        maxAlternativeScore = roleScore;
+                        bestAlternativeRole = pos;
+                    }
+                }
+            }
+            if (bestAlternativeRole) {
+                suggestedRole = bestAlternativeRole;
+            } else { // If no good alternative, pick first available
+                 suggestedRole = availablePositions[0];
+            }
+        } else if (availablePositions.length === 0 && !teamPickedPositions.has(suggestedRole)) {
+            // This case should ideally not happen if logic is correct, means no roles available
+            // but current champ's role is also not picked (paradox). Fallback to its main role.
+        }
+
+
+        if (reasonParts.length === 0) {
+          reasonParts.push(suggestedRole ? `Solid ${suggestedRole.toUpperCase()} fit` : "Solid pick");
+        }
+
 
         if (draftPosContext) reasonParts.push(draftPosContext)
         const recommendReason = reasonParts.join(" | ")
 
-        // Final scoring and premium pick
         const counterBonus = counterScore > MIN_COUNTER_WIN_RATE ? counterScore / 50 : 1.0
         const finalScore = (combinedAllyScore > 0 ? combinedAllyScore : 1) * counterBonus
         const isPremiumPick =
@@ -444,8 +534,10 @@ export default function DraftSimulator({
           ...champion,
           synergy: { score: avgAllyWR, avgPickRateTogether, combinedScore: combinedAllyScore, details: synergyDetails },
           counter: { score: counterScore, avgWinRateVs, details: counterDetails },
+          laneCounter: { isLaneCounter, laneCounterScore: laneCounterScoreNum, details: laneCounterDetails },
+          teamCounter: { isTeamCounter, teamCounterScore: teamCounterScoreNum, details: teamCounterDetails },
           draftPos: { pickRateInSlot, context: draftPosContext },
-          recommendReason: recommendReason + filterContext, // Add filter context
+          recommendReason: recommendReason + filterContext,
           finalScore,
           isPremiumPick,
           suggestedPosition: suggestedRole,
@@ -453,7 +545,6 @@ export default function DraftSimulator({
       })
       .sort((a, b) => b.finalScore - a.finalScore)
 
-    // Fallback logic
     let finalRecommendations = championsWithScores.slice(0, 10)
     if (finalRecommendations.length < 5) {
       const numNeeded = 5 - finalRecommendations.length
@@ -473,7 +564,7 @@ export default function DraftSimulator({
             synergy: null,
             counter: null,
             draftPos: null,
-            recommendReason: `General pick ${bestFitRole ? `(Fits ${bestFitRole.toUpperCase()})` : ""}` + filterContext, // Add filter context
+            recommendReason: `General pick ${bestFitRole ? `(Fits ${bestFitRole.toUpperCase()})` : ""}` + filterContext,
             finalScore: (champion.winRate ?? 0) * (champion.pickRate ?? 0),
             isPremiumPick: false,
             suggestedPosition: bestFitRole,
@@ -485,32 +576,30 @@ export default function DraftSimulator({
       finalRecommendations = [...finalRecommendations, ...fallbackPicks]
     }
 
-    // Ensure final list has assigned roles if needed
     return finalRecommendations
       .map((rec) => ({
         ...rec,
-        mainPosition: rec.suggestedPosition || rec.mainPosition || STANDARD_POSITIONS[0], // Ultimate fallback
+        mainPosition: rec.suggestedPosition || rec.mainPosition || STANDARD_POSITIONS[0], 
       }))
       .slice(0, 5)
   }, [
     currentDraftPosition,
-    availableChampions, // This now correctly depends on filterPatch/filterLeague
+    availableChampions, 
     draftState.bluePicks,
     draftState.redPicks,
     draftState.blueBans,
     draftState.redBans,
     filterPosition,
-    filterPatch, // Add filterPatch dependency
-    filterLeague, // Add filterLeague dependency
+    filterPatch, 
+    filterLeague, 
     allSynergyData,
     matchupData,
     draftPositionPickData,
   ])
   // --- END Recommendation Logic ---
 
-  // --- EVENT HANDLERS ---
+  // --- EVENT HANDLERS (Logic Unchanged) ---
   const handleChampionSelect = (champion: ChampionData | any) => {
-    // Use 'any' for recommended champ type
     if (!currentDraftPosition || !champion || !champion.name) return
     const champName = champion.name
     if (bannedChampions.has(champName) || pickedChampions.has(champName)) {
@@ -531,33 +620,25 @@ export default function DraftSimulator({
             targetArray[teamBanIndex] = champName
             actionTaken = true
           }
-        } else {
-          console.error(`Invalid teamBanIndex for order ${currentDraftPosition.order}`)
         }
       } else {
-        // phase === "pick"
         const teamPickIndex = currentDraftPosition.teamPickIndex
         if (teamPickIndex !== undefined && teamPickIndex >= 0 && teamPickIndex < 5) {
           const targetArray = team === "blue" ? newDraftState.bluePicks : newDraftState.redPicks
           if (!targetArray[teamPickIndex].champion) {
-            // Use suggestedPosition from recommendations if available, else default mainPosition
-            const position = champion.suggestedPosition || champion.mainPosition || "" // Use suggested position first
+            const position = champion.suggestedPosition || champion.mainPosition || ""
             targetArray[teamPickIndex] = { champion: champName, position: position }
             actionTaken = true
           }
-        } else {
-          console.error(`Invalid teamPickIndex for order ${currentDraftPosition.order}`)
         }
       }
 
       if (actionTaken) {
         newDraftState.currentStep = prevDraftState.currentStep + 1
-      } else {
-        console.warn("Champion selection failed or slot already filled, step not incremented.")
       }
       return newDraftState
     })
-    setSearchQuery("") // Clear search after selection
+    setSearchQuery("")
   }
 
   const handlePositionChange = (team: "blue" | "red", index: number, position: string) => {
@@ -567,32 +648,20 @@ export default function DraftSimulator({
       const otherPicks = team === "blue" ? newDraftState.bluePicks : newDraftState.redPicks
 
       if (index >= 0 && index < targetArray.length && targetArray[index].champion) {
-        // Validate position
         if (!STANDARD_POSITIONS.includes(position)) {
-          console.warn(`Invalid position selected: ${position}`)
-          return prevDraftState // Don't update for invalid position
+          return prevDraftState
         }
-
-        // Check if the position is already taken by another teammate (excluding self)
         const isPositionTaken = otherPicks.some((pick, i) => i !== index && pick.position === position && pick.champion)
-
         if (isPositionTaken) {
-          console.warn(`Position ${position} is already taken on ${team} team.`)
-          // Optional: Add user feedback here (e.g., toast notification)
-          return prevDraftState // Revert if position is taken
+          return prevDraftState
         }
-
-        // Only update if the position is actually changing and valid/available
         if (targetArray[index].position !== position) {
           targetArray[index].position = position
-          console.log(`Changed ${targetArray[index].champion} position to ${position} for ${team} team index ${index}`)
-          return newDraftState // Return the modified state
+          return newDraftState
         }
       }
-      // If no change was made (e.g., same position selected, invalid index, no champion)
       return prevDraftState
     })
-    // No need for the searchQuery workaround, useMemo dependencies should handle updates.
   }
 
   const resetDraft = () => {
@@ -605,12 +674,12 @@ export default function DraftSimulator({
     })
     setSearchQuery("")
     setFilterPosition("all")
-    setFilterPatch("all") // Reset patch filter
-    setFilterLeague("all") // Reset league filter
+    setFilterPatch("all")
+    setFilterLeague("all")
   }
   // --- END EVENT HANDLERS ---
 
-  // --- DERIVED VALUES FOR RENDER ---
+  // --- DERIVED VALUES FOR RENDER (Logic Unchanged) ---
   const isDraftComplete = draftState.currentStep > DRAFT_POSITIONS.length
   const getDraftPhaseDescription = () => {
     if (isDraftComplete) return "Draft Complete"
@@ -624,38 +693,36 @@ export default function DraftSimulator({
 
   // --- RENDER ---
   return (
-    <Card className="w-full bg-gradient-to-b from-gray-900 to-slate-950 text-white border-gray-700/50 shadow-xl">
-      <CardHeader className="border-b border-gray-700/50 pb-4">
+    <Card className="w-full bg-black text-white border border-gray-800 shadow-2xl shadow-red-900/30 rounded-xl">
+      <CardHeader className="border-b border-red-700/30 pb-4 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+          <CardTitle className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-400 text-center">
             Draft Simulator
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
-            className="bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600 hover:text-white"
+            className="bg-red-600 text-white border-red-700 hover:bg-red-700 hover:border-red-500 rounded-md shadow-md hover:shadow-lg transition-all duration-150"
             onClick={resetDraft}
           >
             <RefreshCw className="h-4 w-4 mr-2" /> Reset Draft
           </Button>
         </div>
-        <CardDescription className="text-gray-400 mt-1">Plan your picks and bans like the pros.</CardDescription>
       </CardHeader>
 
       <CardContent className="p-4 md:p-6">
-        {/* Main Layout Container: Using flex for better control over side column widths */}
         <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
           {/* === Blue Team Column (Left) === */}
-          <div className="lg:w-[240px] xl:w-[280px] shrink-0 bg-blue-900/10 border border-blue-700/30 rounded-lg p-3 space-y-3 order-1">
-            <h3 className="text-lg font-semibold text-blue-400 text-center border-b border-blue-700/30 pb-2">
+          <div className="lg:w-[260px] xl:w-[300px] shrink-0 bg-gray-950 border border-blue-700/50 rounded-lg p-3 space-y-3 order-1 shadow-lg">
+            <h3 className="text-xl font-bold text-white text-center bg-blue-600 py-2 rounded-t-md -mx-3 -mt-3 mb-3 border-b border-blue-400/50">
               Blue Side
             </h3>
             {/* Blue Bans */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
-                <Ban className="h-3 w-3" /> Bans
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <Ban className="h-4 w-4 text-red-400" /> Bans
               </h4>
-              <div className="flex justify-center gap-2 flex-wrap bg-black/20 p-2 rounded">
+              <div className="flex justify-center gap-2 flex-wrap bg-black/30 p-2 rounded-md border border-gray-700/50">
                 {draftState.blueBans.map((ban, index) => {
                   const isCurrentBan =
                     currentDraftPosition?.phase === "ban" &&
@@ -665,29 +732,29 @@ export default function DraftSimulator({
                     <div
                       key={`blue-ban-${index}`}
                       className={cn(
-                        `w-10 h-10 rounded-sm flex items-center justify-center shrink-0 relative overflow-hidden border`,
-                        ban ? "bg-gray-800 border-gray-600" : "bg-gray-800/50 border-dashed border-gray-700",
-                        isCurrentBan && "border-2 border-yellow-400 ring-2 ring-yellow-400/50 shadow-lg",
+                        `w-11 h-11 rounded-md flex items-center justify-center shrink-0 relative overflow-hidden border-2 transition-all duration-150`,
+                        ban ? "bg-gray-800 border-gray-600" : "bg-gray-800/60 border-dashed border-gray-700",
+                        isCurrentBan && "border-yellow-400 ring-2 ring-yellow-400/70 shadow-lg shadow-yellow-500/30 scale-105",
                       )}
                     >
                       {ban ? (
-                        <TooltipProvider>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative group">
-                                <ChampionImage championName={ban} size={40} />
-                                <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-100">
-                                  <X className="h-5 w-5 text-red-500" />
+                              <div className="relative group w-full h-full">
+                                <ChampionImage championName={ban} size={44} className="object-cover w-full h-full" />
+                                <div className="absolute inset-0 bg-black/75 flex items-center justify-center opacity-100">
+                                  <X className="h-6 w-6 text-red-500" />
                                 </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-black text-white border-gray-700">
-                              <p>{ban} (Banned)</p>
+                            <TooltipContent className="bg-black text-white border border-gray-700 rounded-md shadow-lg">
+                              <p className="font-semibold">{ban} (Banned)</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <span className="text-[10px] text-gray-500">B{index + 1}</span>
+                        <span className="text-xs text-gray-500">B{index + 1}</span>
                       )}
                     </div>
                   )
@@ -695,8 +762,8 @@ export default function DraftSimulator({
               </div>
             </div>
             {/* Blue Picks */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider text-center pt-1">Picks</h4>
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider text-center pt-1">Picks</h4>
               {Array.from({ length: 5 }).map((_, index) => {
                 const pick = draftState.bluePicks[index]
                 const isActivePick =
@@ -708,53 +775,49 @@ export default function DraftSimulator({
                   <div
                     key={`blue-pick-${index}`}
                     className={cn(
-                      "flex items-center gap-2 p-1.5 rounded-md transition-colors duration-200 h-[60px]", // Consistent height
-                      pick.champion ? "bg-gradient-to-r from-blue-900/40 to-transparent" : "bg-black/20",
+                      "flex items-center gap-2 p-2 rounded-lg transition-all duration-200 h-[68px] border-2", 
+                      pick.champion ? "bg-gradient-to-r from-blue-900/50 via-gray-900/30 to-gray-900/20" : "bg-black/30 border-gray-700/50",
                       isActivePick
-                        ? "bg-blue-600/30 border border-blue-400 shadow-inner shadow-blue-500/30"
-                        : "border border-transparent",
+                        ? "border-blue-500 shadow-lg shadow-blue-500/30 scale-[1.02]"
+                        : pick.champion ? "border-blue-700/60" : "border-gray-700/50",
                     )}
                   >
-                    {/* Champion Image */}
                     <div
                       className={cn(
-                        "w-11 h-11 rounded-sm flex items-center justify-center shrink-0 relative overflow-hidden border",
-                        pick.champion ? "bg-gray-800 border-gray-600" : "bg-gray-800/50 border-dashed border-gray-700",
+                        "w-12 h-12 rounded-md flex items-center justify-center shrink-0 relative overflow-hidden border-2",
+                        pick.champion ? "bg-gray-800 border-gray-600" : "bg-gray-800/60 border-dashed border-gray-700",
                       )}
                     >
                       {pick.champion ? (
-                        <TooltipProvider>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative group">
-                                <ChampionImage championName={pick.champion} size={44} />
-                                {/* Show Role Badge on Pick Image */}
+                              <div className="relative group w-full h-full">
+                                <ChampionImage championName={pick.champion} size={48} className="object-cover w-full h-full"/>
                                 {pick.position && (
                                   <Badge
-                                    variant="outline"
-                                    className="absolute -bottom-1 -right-1 bg-black/75 border-gray-600/80 text-white text-[9px] px-1 py-0 pointer-events-none leading-tight"
+                                    variant="secondary"
+                                    className="absolute -bottom-1.5 -right-1.5 bg-black/80 border border-gray-500 text-white text-[10px] px-1.5 py-0.5 pointer-events-none leading-tight font-semibold rounded-sm shadow-md"
                                   >
                                     {pick.position.toUpperCase()}
                                   </Badge>
                                 )}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-black text-white border-gray-700">
-                              <p>{pick.champion}</p>
+                            <TooltipContent className="bg-black text-white border border-gray-700 rounded-md shadow-lg">
+                              <p className="font-semibold">{pick.champion}</p>
                               {pick.position && <p className="text-xs text-gray-400">{pick.position.toUpperCase()}</p>}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <span className="text-[10px] text-gray-500">B{index + 1}</span>
+                        <span className="text-xs text-gray-500">B{index + 1}</span>
                       )}
                     </div>
-                    {/* Champion Name & Role Select */}
-                    <div className="flex-grow min-w-0 space-y-0.5">
+                    <div className="flex-grow min-w-0 space-y-1">
                       {pick.champion ? (
                         <>
-                          <p className="text-[13px] font-medium truncate text-white leading-tight">{pick.champion}</p>
-                          {/* --- Role Select --- */}
+                          <p className="text-sm font-semibold truncate text-white leading-tight">{pick.champion}</p>
                           <Select
                             value={pick.position || ""}
                             onValueChange={(value) => handlePositionChange("blue", index, value)}
@@ -762,28 +825,26 @@ export default function DraftSimulator({
                           >
                             <SelectTrigger
                               className={cn(
-                                "h-6 text-[10px] w-[80px] rounded-sm focus:ring-1 focus:ring-blue-400 focus:ring-offset-0 flex items-center gap-1 pl-1.5 pr-1", // Added padding/gap
+                                "h-7 text-xs w-full max-w-[90px] rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-black flex items-center gap-1.5 pl-2 pr-1 shadow",
                                 pick.champion
-                                  ? "bg-gray-800/80 border-gray-700/80"
-                                  : "bg-gray-700/50 border-gray-600/50 text-gray-500",
+                                  ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700/70"
+                                  : "bg-gray-700/60 border-gray-600/60 text-gray-500",
                               )}
                             >
-                              {/* Role Change Icon */}
-                              <ArrowUpDown className="h-3 w-3 text-gray-400 shrink-0" />
+                              <ArrowUpDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                               <SelectValue placeholder="Role" />
                             </SelectTrigger>
-                            <SelectContent className="bg-gray-900 border-gray-700 text-white min-w-[80px]">
+                            <SelectContent className="bg-gray-900 border-gray-700 text-white min-w-[90px] shadow-xl rounded-md">
                               {STANDARD_POSITIONS.map((pos) => (
-                                <SelectItem key={`blue-pos-${index}-${pos}`} value={pos} className="text-xs">
+                                <SelectItem key={`blue-pos-${index}-${pos}`} value={pos} className="text-xs hover:bg-blue-600 focus:bg-blue-600">
                                   {pos.toUpperCase()}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {/* --- End Role Select --- */}
                         </>
                       ) : (
-                        <p className="text-xs text-gray-500 italic h-10 flex items-center">Selecting...</p>
+                        <p className="text-sm text-gray-500 italic h-10 flex items-center">Waiting...</p>
                       )}
                     </div>
                   </div>
@@ -794,56 +855,52 @@ export default function DraftSimulator({
 
           {/* === Center Column (Selection Area) === */}
           <div className="flex-grow space-y-4 md:space-y-6 min-w-0 order-2 lg:order-2">
-            {/* Current Phase Info */}
             {!isDraftComplete && (
-              <div className="p-3 bg-gray-800/60 rounded-lg border border-gray-700/50 text-center sticky top-0 z-10 backdrop-blur-sm">
-                <h3 className="text-base font-semibold text-yellow-300">{getDraftPhaseDescription()}</h3>
+              <div className="p-3 bg-gray-900 rounded-lg border-2 border-red-600/70 text-center sticky top-2 z-20 backdrop-blur-md shadow-xl shadow-red-900/20">
+                <h3 className="text-lg font-bold text-red-300">{getDraftPhaseDescription()}</h3>
               </div>
             )}
-            {/* Champion Selection Area */}
             {!isDraftComplete && currentDraftPosition && (
-              <div className="space-y-4">
-                {/* Search and Filter */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1">
-                  <h3 className="text-lg font-semibold hidden sm:block text-gray-300">Available Champions</h3>
+              <div className="space-y-4 p-1 bg-gray-950/50 rounded-lg border border-gray-800">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-gray-900/70 rounded-md border border-gray-700/50">
+                  <h3 className="text-xl font-semibold text-gray-200 hidden sm:block">
+                    Select Champion
+                  </h3>
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-end">
-                    {/* Search Input */}
                     <div className="relative flex-grow sm:flex-grow-0 sm:w-48">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                       <Input
                         type="search"
                         placeholder="Search..."
-                        className="pl-8 bg-gray-900/70 border-gray-700 text-white w-full focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 h-9"
+                        className="pl-9 bg-gray-800 border-gray-700 text-white w-full focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 focus:ring-offset-black h-10 rounded-md shadow-sm"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
 
-                    {/* Position Filter */}
                     <Select value={filterPosition} onValueChange={setFilterPosition}>
-                      <SelectTrigger className="w-[110px] bg-gray-900/70 border-gray-700 text-white shrink-0 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 h-9">
+                      <SelectTrigger className="w-full sm:w-[120px] bg-gray-800 border-gray-700 text-white shrink-0 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 focus:ring-offset-black h-10 rounded-md shadow-sm">
                         <SelectValue placeholder="Role" />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                        <SelectItem value="all">All Roles</SelectItem>
+                      <SelectContent className="bg-gray-900 border-gray-700 text-white shadow-xl rounded-md">
+                        <SelectItem value="all" className="hover:bg-red-600 focus:bg-red-600">All Roles</SelectItem>
                         {STANDARD_POSITIONS.map((pos) => (
-                          <SelectItem key={pos} value={pos}>
+                          <SelectItem key={pos} value={pos} className="hover:bg-red-600 focus:bg-red-600">
                             {pos.toUpperCase()}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
 
-                    {/* Patch Filter */}
                     {patches && patches.length > 0 && (
                       <Select value={filterPatch} onValueChange={setFilterPatch}>
-                        <SelectTrigger className="w-[100px] bg-gray-900/70 border-gray-700 text-white shrink-0 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 h-9">
+                        <SelectTrigger className="w-full sm:w-[110px] bg-gray-800 border-gray-700 text-white shrink-0 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 focus:ring-offset-black h-10 rounded-md shadow-sm">
                           <SelectValue placeholder="Patch" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-[200px] overflow-y-auto">
-                          <SelectItem value="all">All Patches</SelectItem>
+                        <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-[200px] overflow-y-auto shadow-xl rounded-md">
+                          <SelectItem value="all" className="hover:bg-red-600 focus:bg-red-600">All Patches</SelectItem>
                           {patches.map((patch) => (
-                            <SelectItem key={patch} value={patch}>
+                            <SelectItem key={patch} value={patch} className="hover:bg-red-600 focus:bg-red-600">
                               {patch}
                             </SelectItem>
                           ))}
@@ -851,16 +908,15 @@ export default function DraftSimulator({
                       </Select>
                     )}
 
-                    {/* League Filter */}
                     {leagues && leagues.length > 0 && (
                       <Select value={filterLeague} onValueChange={setFilterLeague}>
-                        <SelectTrigger className="w-[100px] bg-gray-900/70 border-gray-700 text-white shrink-0 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 h-9">
+                        <SelectTrigger className="w-full sm:w-[110px] bg-gray-800 border-gray-700 text-white shrink-0 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:ring-offset-0 focus:ring-offset-black h-10 rounded-md shadow-sm">
                           <SelectValue placeholder="League" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-[200px] overflow-y-auto">
-                          <SelectItem value="all">All Leagues</SelectItem>
+                        <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-[200px] overflow-y-auto shadow-xl rounded-md">
+                          <SelectItem value="all" className="hover:bg-red-600 focus:bg-red-600">All Leagues</SelectItem>
                           {leagues.map((league) => (
-                            <SelectItem key={league} value={league}>
+                            <SelectItem key={league} value={league} className="hover:bg-red-600 focus:bg-red-600">
                               {league}
                             </SelectItem>
                           ))}
@@ -870,26 +926,24 @@ export default function DraftSimulator({
                   </div>
                 </div>
 
-                {/* Tabs for All / Recommended */}
                 <Tabs defaultValue="recommended" className="w-full">
-                  <TabsList className="bg-gray-800/80 border border-gray-700/50 inline-flex h-9 items-center justify-center rounded-lg p-1 text-muted-foreground">
+                  <TabsList className="bg-gray-900 border border-gray-700 inline-flex h-10 items-center justify-center rounded-lg p-1 text-gray-300 shadow-md">
                     <TabsTrigger
                       value="all"
-                      className="px-3 py-1 text-sm data-[state=active]:bg-gray-700/80 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+                      className="px-4 py-1.5 text-sm font-medium data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-inner rounded-md transition-colors"
                     >
-                      All
+                      All Champions
                     </TabsTrigger>
                     <TabsTrigger
                       value="recommended"
-                      className="px-3 py-1 text-sm data-[state=active]:bg-yellow-600/80 data-[state=active]:text-black data-[state=active]:shadow-md rounded-md flex items-center gap-1"
+                      className="px-4 py-1.5 text-sm font-medium data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md flex items-center gap-1.5 transition-colors"
                     >
                       <Star className="h-4 w-4" /> Recommended
                     </TabsTrigger>
                   </TabsList>
 
-                  {/* All Champions Tab */}
                   <TabsContent value="all" className="mt-4">
-                    <div className="grid grid-cols-6 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-9 xl:grid-cols-10 gap-2">
+                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-9 gap-2.5">
                       {filteredChampions.map((champion) => {
                         if (!champion) return null
                         const isUnavailable = bannedChampions.has(champion.name) || pickedChampions.has(champion.name)
@@ -906,10 +960,10 @@ export default function DraftSimulator({
                                   aria-label={`Select ${champion.name}`}
                                   aria-disabled={isUnavailable}
                                   className={cn(
-                                    "relative rounded overflow-hidden transition-all aspect-square group border-2",
+                                    "relative rounded-md overflow-hidden transition-all object-cover group border-2 shadow-sm",
                                     isUnavailable
                                       ? "opacity-30 cursor-not-allowed grayscale border-transparent"
-                                      : "cursor-pointer border-gray-700/50 hover:border-red-500/80 focus:border-red-500/80 focus:outline-none hover:scale-105 focus:scale-105",
+                                      : "cursor-pointer bg-gray-800 border-gray-700/70 hover:border-red-500 focus:border-red-500 focus:outline-none hover:scale-105 focus:scale-105 hover:shadow-md focus:shadow-md",
                                   )}
                                   onClick={() => {
                                     if (!isUnavailable) handleChampionSelect(champion)
@@ -923,31 +977,31 @@ export default function DraftSimulator({
                                 >
                                   <ChampionImage
                                     championName={champion.name}
-                                    size={64}
-                                    className="w-full h-full object-contain"
+                                    size={50} 
+                                    className="rounded-full aspect-square object-cover aspect-ratio"
                                   />
                                   {isUnavailable && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
-                                      <X className="h-5 w-5 text-red-500" />
+                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center pointer-events-none">
+                                      <X className="h-6 w-6 text-red-500" />
                                     </div>
                                   )}
-                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-1 pt-2 pb-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <p className="text-white text-[10px] font-semibold truncate text-center leading-tight">
+                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-1.5 pt-3 pb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <p className="text-white text-xs font-semibold truncate text-center leading-tight">
                                       {champion.name}
                                     </p>
                                   </div>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent className="bg-black text-white border-gray-700">
-                                <p className="font-semibold">{champion.name}</p>
+                              <TooltipContent className="bg-black text-white border-2 border-red-700/80 p-2.5 rounded-md shadow-xl text-xs">
+                                <p className="font-bold text-sm text-red-300">{champion.name}</p>
                                 {champion.mainPosition && (
-                                  <p className="text-xs text-gray-400">{champion.mainPosition.toUpperCase()}</p>
+                                  <p className="text-gray-400">{champion.mainPosition.toUpperCase()}</p>
                                 )}
                                 {champion.patch && filterPatch === "all" && (
-                                  <p className="text-xs text-gray-400">Patch: {champion.patch}</p>
+                                  <p className="text-xs text-gray-500">P: {champion.patch}</p>
                                 )}
                                 {champion.league && filterLeague === "all" && (
-                                  <p className="text-xs text-gray-400">League: {champion.league}</p>
+                                  <p className="text-xs text-gray-500">L: {champion.league}</p>
                                 )}
                                 {isUnavailable && <p className="text-xs text-red-400 mt-1">(Unavailable)</p>}
                               </TooltipContent>
@@ -956,288 +1010,319 @@ export default function DraftSimulator({
                         )
                       })}
                       {filteredChampions.length === 0 && (
-                        <p className="text-gray-400 col-span-full text-center py-6">No champions match filters.</p>
+                        <p className="text-gray-400 col-span-full text-center py-8 text-lg">No champions match filters.</p>
                       )}
                     </div>
                   </TabsContent>
 
-                  {/* Recommended Champions Tab */}
                   <TabsContent value="recommended" className="mt-4">
-                    {/* Render recommendedChampions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {recommendedChampions.map((champion) => {
-                        if (!champion) return null
-                        const isUnavailable = bannedChampions.has(champion.name) || pickedChampions.has(champion.name)
-                        const hasAllySynergy = champion.synergy?.details?.length > 0
-                        const isGoodCounter = champion.counter?.score > MIN_COUNTER_WIN_RATE
-                        const isRarePick =
-                          champion.draftPos?.pickRateInSlot < DRAFT_SLOT_PICK_RATE_LOW_THRESHOLD &&
-                          champion.draftPos?.pickRateInSlot > 0
+                    <div className="bg-black/30 p-4 rounded-lg border border-gray-800/60 shadow-inner">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                        {recommendedChampions.map((champion) => {
+                          if (!champion) return null
+                          const isUnavailable = bannedChampions.has(champion.name) || pickedChampions.has(champion.name)
+                          const hasAllySynergy = champion.synergy?.details?.length > 0 && champion.synergy?.score >= MIN_ALLY_SYNERGY_WIN_RATE 
+                          const isGoodCounter = champion.counter?.score > MIN_COUNTER_WIN_RATE
+                          const isRarePick =
+                            champion.draftPos?.pickRateInSlot < DRAFT_SLOT_PICK_RATE_LOW_THRESHOLD &&
+                            champion.draftPos?.pickRateInSlot > 0
 
-                        return (
-                          <TooltipProvider
-                            key={`${champion.name}-rec-${champion.patch}-${champion.league}`}
-                            delayDuration={200}
-                          >
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div
-                                  tabIndex={isUnavailable ? -1 : 0}
-                                  role="button"
-                                  aria-label={`Select recommended ${champion.name}`}
-                                  aria-disabled={isUnavailable}
-                                  className={cn(
-                                    "bg-gray-800/70 rounded-lg overflow-hidden border-2 flex flex-col group relative shadow-md",
-                                    isUnavailable
-                                      ? "opacity-40 cursor-not-allowed grayscale border-transparent"
-                                      : "cursor-pointer transition-all duration-200 ease-out",
-                                    champion.isPremiumPick && !isUnavailable
-                                      ? "border-yellow-400/80 shadow-lg shadow-yellow-500/20 hover:border-yellow-300"
-                                      : "border-gray-700/50 hover:border-red-500/70",
-                                    !champion.isPremiumPick && !isUnavailable
-                                      ? "hover:bg-gray-700/80 focus:outline-none focus:border-red-500/70 focus:bg-gray-700/80 transform hover:-translate-y-1 focus:-translate-y-1"
-                                      : "",
-                                  )}
-                                  onClick={() => {
-                                    if (!isUnavailable) handleChampionSelect(champion)
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (!isUnavailable && (e.key === "Enter" || e.key === " ")) {
-                                      e.preventDefault()
-                                      handleChampionSelect(champion)
-                                    }
-                                  }}
-                                >
-                                  {/* Premium Pick Badge */}
-                                  {champion.isPremiumPick && !isUnavailable && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="absolute -top-2 -right-2 z-10 bg-yellow-500 text-black text-[10px] px-1 py-0.5 pointer-events-none transform rotate-12 shadow-md font-semibold"
-                                    >
-                                      <Star className="h-3 w-3 mr-0.5 text-yellow-900" /> PRIME
-                                    </Badge>
-                                  )}
-                                  {/* Champion Images & Badges */}
-                                  <div className="relative aspect-video w-full flex items-center justify-center bg-gradient-to-b from-gray-700/50 to-gray-900/50 overflow-hidden">
-                                    <ChampionImage
-                                      championName={champion.name}
-                                      type="splash"
-                                      className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity"
-                                    />
-                                    <ChampionImage
-                                      championName={champion.name}
-                                      size={72}
-                                      className="z-10 drop-shadow-lg"
-                                    />
-                                    {isUnavailable && (
-                                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none z-20">
-                                        <X className="h-6 w-6 text-red-500" />
+                          return (
+                            <TooltipProvider
+                              key={`${champion.name}-rec-${champion.patch}-${champion.league}`}
+                              delayDuration={150}
+                            >
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    tabIndex={isUnavailable ? -1 : 0}
+                                    role="button"
+                                    aria-label={`Select recommended ${champion.name}`}
+                                    aria-disabled={isUnavailable}
+                                    className={cn(
+                                      "bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-lg overflow-hidden border-2 flex flex-col group relative shadow-xl hover:shadow-2xl focus:shadow-2xl",
+                                      isUnavailable
+                                        ? "opacity-40 cursor-not-allowed grayscale border-transparent"
+                                        : "cursor-pointer transition-all duration-200 ease-out",
+                                      champion.isPremiumPick && !isUnavailable
+                                        ? "border-yellow-400 shadow-yellow-500/40 hover:border-yellow-300 hover:shadow-yellow-400/50 transform hover:-translate-y-1 focus:-translate-y-1"
+                                        : "border-gray-700/60 hover:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/30",
+                                      !champion.isPremiumPick && !isUnavailable
+                                        ? "hover:shadow-red-500/25 focus:shadow-red-500/25 transform hover:-translate-y-1 focus:-translate-y-1"
+                                        : "",
+                                    )}
+                                    onClick={() => {
+                                      if (!isUnavailable) handleChampionSelect(champion)
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (!isUnavailable && (e.key === "Enter" || e.key === " ")) {
+                                        e.preventDefault()
+                                        handleChampionSelect(champion)
+                                      }
+                                    }}
+                                  >
+                                    {champion.isPremiumPick && !isUnavailable && (
+                                      <div
+                                        className="absolute -top-3 -right-3 z-20 bg-gradient-to-br from-red-600 via-red-700 to-yellow-500 text-black text-xs px-3 py-1.5 font-extrabold uppercase tracking-wider border-2 border-black shadow-lg shadow-yellow-600/50 transform rotate-[10deg] flex items-center gap-1 rounded-md"
+                                      >
+                                        <Star className="h-4 w-4 text-yellow-900 fill-current" /> PRIME
                                       </div>
                                     )}
-                                    {/* Display Suggested/Main Position */}
-                                    {(champion.suggestedPosition || champion.mainPosition) && (
-                                      <Badge
-                                        variant="outline"
-                                        className="absolute bottom-1 right-1 bg-black/70 border-gray-600 text-white text-[10px] px-1 py-0 pointer-events-none z-10"
-                                      >
-                                        {(champion.suggestedPosition || champion.mainPosition)?.toUpperCase()}
-                                      </Badge>
-                                    )}
-                                    {/* Synergy/Counter/Rare Badges */}
-                                    <div className="absolute top-1 left-1 flex flex-col gap-1 z-10">
-                                      {hasAllySynergy && champion.synergy?.score >= MIN_ALLY_SYNERGY_WIN_RATE + 1 && (
+                                    <div className="relative aspect-[16/10] w-full flex items-center justify-center bg-gradient-to-b from-gray-800/50 to-black/50 overflow-hidden">
+                                      <ChampionImage
+                                        championName={champion.name}
+                                        type="splash"
+                                        className="absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-40 transition-opacity duration-300 ease-in-out"
+                                      />
+                                      <ChampionImage
+                                        championName={champion.name}
+                                        size={80}
+                                        className="z-10 drop-shadow-xl group-hover:scale-105 group-hover:brightness-110 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300 ease-in-out"
+                                      />
+                                      {isUnavailable && (
+                                        <div className="absolute inset-0 bg-black/80 flex items-center justify-center pointer-events-none z-20">
+                                          <X className="h-8 w-8 text-red-500" />
+                                        </div>
+                                      )}
+                                      {(champion.suggestedPosition || champion.mainPosition) && (
                                         <Badge
                                           variant="secondary"
-                                          className="border-green-600/80 text-green-300 bg-green-900/50 text-[10px] px-1 py-0 pointer-events-none flex items-center gap-1 shadow-sm"
+                                          className="absolute bottom-2 right-2 bg-black/80 border border-gray-600 text-white text-[10px] px-2 py-1 pointer-events-none z-10 font-semibold rounded shadow-md"
                                         >
-                                          <TrendingUp className="h-3 w-3" /> Synergy
+                                          {(champion.suggestedPosition || champion.mainPosition)?.toUpperCase()}
                                         </Badge>
                                       )}
-                                      {isGoodCounter && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="border-red-600/80 text-red-300 bg-red-900/50 text-[10px] px-1 py-0 pointer-events-none flex items-center gap-1 shadow-sm"
-                                        >
-                                          <Swords className="h-3 w-3" /> Counter
-                                        </Badge>
-                                      )}
-                                      {isRarePick && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="border-blue-600/80 text-blue-300 bg-blue-900/50 text-[10px] px-1 py-0 pointer-events-none flex items-center gap-1 shadow-sm"
-                                        >
-                                          Rare Pick
-                                        </Badge>
-                                      )}
+                                      <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+                                        {hasAllySynergy && (
+                                          <div className="bg-green-600 border border-green-500/70 text-white text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 shadow-md">
+                                            <TrendingUp className="h-3.5 w-3.5" /> Synergy
+                                          </div>
+                                        )}
+                                        {isGoodCounter && (
+                                          <div className="bg-red-600 border border-red-500/70 text-white text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 shadow-md">
+                                            <Swords className="h-3.5 w-3.5" /> Counter
+                                          </div>
+                                        )}
+                                        {champion.laneCounter?.isLaneCounter && (
+                                          <div className="bg-purple-600 border border-purple-500/70 text-white text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 shadow-md">
+                                            <Swords className="h-3.5 w-3.5" /> Lane Cntr
+                                          </div>
+                                        )}
+                                        {champion.teamCounter?.isTeamCounter && (
+                                          <div className="bg-orange-600 border border-orange-500/70 text-white text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 shadow-md">
+                                            <Swords className="h-3.5 w-3.5" /> Team Cntr
+                                          </div>
+                                        )}
+                                        {isRarePick && (
+                                          <div className="bg-sky-600 border border-sky-500/70 text-white text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 shadow-md">
+                                            Rare Pick
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                  {/* Champion Name & Recommendation Reason */}
-                                  <div className="p-2 text-center bg-gray-800/50 border-t border-gray-700/50 flex-grow flex flex-col justify-between">
-                                    <div>
-                                      <p className="text-sm font-semibold truncate mb-1">{champion.name}</p>
-                                      <p className="text-[11px] text-gray-400 italic mb-2 h-8 line-clamp-2">
-                                        {champion.recommendReason || "No specific reason"}
-                                      </p>
-                                    </div>
-                                    {/* Stat Summary */}
-                                    <div className="flex justify-center gap-3 text-xs border-t border-gray-700/30 pt-1 mt-auto">
-                                      {hasAllySynergy && champion.synergy?.score && (
-                                        <span
-                                          className="inline-flex items-center text-green-300"
-                                          title={`Avg WR with Team: ${champion.synergy.score.toFixed(1)}%`}
-                                        >
-                                          <TrendingUp className="h-3 w-3 mr-0.5" /> {champion.synergy.score.toFixed(0)}%
-                                        </span>
-                                      )}
-                                      {isGoodCounter && champion.counter?.avgWinRateVs && (
-                                        <span
-                                          className="inline-flex items-center text-red-300"
-                                          title={`Avg WR vs Enemy: ${champion.counter.avgWinRateVs.toFixed(1)}%`}
-                                        >
-                                          <Swords className="h-3 w-3 mr-0.5" />
-                                          {champion.counter.avgWinRateVs.toFixed(0)}%
-                                        </span>
-                                      )}
-                                      {!hasAllySynergy && !isGoodCounter && typeof champion.winRate === "number" && (
-                                        <span
-                                          className="inline-flex items-center text-blue-300"
-                                          title={`Overall WR: ${champion.winRate.toFixed(1)}%`}
-                                        >
-                                          WR {champion.winRate.toFixed(0)}%
-                                        </span>
-                                      )}
-                                    </div>
-                                    {isUnavailable && <p className="text-xs text-red-400 mt-1">(Unavailable)</p>}
-                                  </div>
-                                </div>
-                              </TooltipTrigger>
-                              {/* Detailed Tooltip Content */}
-                              <TooltipContent className="bg-black text-white border-gray-700 p-3 max-w-xs text-xs">
-                                <div className="space-y-2">
-                                  <p className="font-semibold text-base mb-1">{champion.name}</p>
-                                  {champion.recommendReason && (
-                                    <p className="text-sm text-gray-300 italic mb-2">{champion.recommendReason}</p>
-                                  )}
-                                  {/* Ally Synergy Details */}
-                                  {hasAllySynergy &&
-                                    champion.synergy?.details &&
-                                    champion.synergy.details.length > 0 && (
-                                      <div className="border-t border-gray-600 pt-2">
-                                        <p className="text-xs text-green-400 font-semibold mb-1 flex items-center gap-1">
-                                          <TrendingUp className="h-3 w-3" /> Ally Synergy:
+                                    <div className="p-3 text-center bg-black/50 backdrop-blur-sm border-t-2 border-red-600/50 flex-grow flex flex-col justify-between">
+                                      <div>
+                                        <p className="text-lg font-extrabold truncate mb-1 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-white tracking-tight">
+                                          {champion.name}
                                         </p>
-                                        <div className="space-y-0.5">
-                                          {champion.synergy.details.slice(0, 3).map((detail, idx) => (
+                                        <p className="text-xs text-gray-300 italic mb-2 h-8 line-clamp-2 leading-tight">
+                                          {champion.recommendReason || "Solid pick"}
+                                        </p>
+                                      </div>
+                                      <div className="flex justify-center items-center gap-x-4 gap-y-1 text-xs border-t border-gray-700/40 pt-2 mt-2 font-medium flex-wrap">
+                                        {hasAllySynergy && champion.synergy?.score ? (
+                                          <span
+                                            className="inline-flex items-center text-green-400"
+                                            title={`Avg WR with Team: ${champion.synergy.score.toFixed(1)}%`}
+                                          >
+                                            <TrendingUp className="h-4 w-4 mr-1" /> {champion.synergy.score.toFixed(0)}%
+                                          </span>
+                                        ) : isGoodCounter && champion.counter?.avgWinRateVs ? (
+                                          <span
+                                            className="inline-flex items-center text-red-400"
+                                            title={`Avg WR vs Enemy: ${champion.counter.avgWinRateVs.toFixed(1)}%`}
+                                          >
+                                            <Swords className="h-4 w-4 mr-1" />
+                                            {champion.counter.avgWinRateVs.toFixed(0)}%
+                                          </span>
+                                        ) : typeof champion.winRate === "number" ? (
+                                          <span
+                                            className="inline-flex items-center text-sky-400"
+                                            title={`Overall WR: ${champion.winRate.toFixed(1)}%`}
+                                          >
+                                            WR {champion.winRate.toFixed(0)}%
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-500">N/A</span>
+                                        )}
+                                      </div>
+                                      {isUnavailable && <p className="text-xs text-red-400 mt-1">(Unavailable)</p>}
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-black border-2 border-red-600/80 text-white p-4 max-w-md text-xs shadow-2xl shadow-red-900/40 rounded-lg">
+                                  <div className="space-y-2.5">
+                                    <p className="text-xl font-extrabold mb-2 border-b-2 border-red-700/50 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-300">
+                                      {champion.name}
+                                    </p>
+                                    {champion.recommendReason && (
+                                      <p className="text-sm text-gray-200 italic mb-3 leading-relaxed">{champion.recommendReason}</p>
+                                    )}
+                                    {hasAllySynergy &&
+                                      champion.synergy?.details &&
+                                      champion.synergy.details.length > 0 && (
+                                        <div className="border-t border-red-800/60 pt-2.5 mt-2.5">
+                                          <p className="text-sm text-green-400 font-semibold mb-1.5 flex items-center gap-1.5">
+                                            <TrendingUp className="h-4 w-4" /> Ally Synergy:
+                                          </p>
+                                          <div className="space-y-1">
+                                            {champion.synergy.details.slice(0, 3).map((detail, idx) => (
+                                              <div key={idx} className="flex justify-between gap-2">
+                                                <span className="text-gray-400">w/ {detail.champion}</span>
+                                                <div className="text-right font-semibold">
+                                                  <span className="text-green-300">
+                                                    {detail.synergyScore.toFixed(1)}% WR
+                                                  </span>
+                                                  <span className="text-gray-600 mx-1.5">|</span>
+                                                  <span className="text-sky-300">
+                                                    {detail.pickRateTogether.toFixed(1)}% PR
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    {champion.counter?.details && champion.counter.details.length > 0 && (
+                                      <div className="border-t border-red-800/60 pt-2.5 mt-2.5">
+                                        <p className="text-sm text-red-400 font-semibold mb-1.5 flex items-center gap-1.5">
+                                          <Swords className="h-4 w-4" /> Matchup vs Enemy:
+                                        </p>
+                                        <div className="space-y-1">
+                                          {champion.counter.details.slice(0, 3).map((detail, idx) => (
                                             <div key={idx} className="flex justify-between gap-2">
-                                              <span>w/ {detail.champion}</span>
-                                              <div className="text-right">
-                                                <span className="text-green-300">
-                                                  {detail.synergyScore.toFixed(1)}% WR
+                                              <span className="text-gray-400">vs {detail.champion}</span>
+                                              <div className="text-right font-semibold">
+                                                <span
+                                                  className={detail.winRateVs >= 50 ? "text-green-300" : "text-red-300"}
+                                                >
+                                                  {detail.winRateVs.toFixed(1)}% WR
                                                 </span>
-                                                <span className="text-gray-500 mx-1">|</span>
-                                                <span className="text-blue-300">
-                                                  {detail.pickRateTogether.toFixed(1)}% PR
-                                                </span>
+                                                <span className="text-gray-600 mx-1.5">|</span>
+                                                <span className="text-sky-300">{detail.pickRateVs.toFixed(1)}% PR</span>
                                               </div>
                                             </div>
                                           ))}
                                         </div>
                                       </div>
                                     )}
-                                  {/* Enemy Matchup Details */}
-                                  {champion.counter?.details && champion.counter.details.length > 0 && (
-                                    <div className="border-t border-gray-600 pt-2">
-                                      <p className="text-xs text-red-400 font-semibold mb-1 flex items-center gap-1">
-                                        <Swords className="h-3 w-3" /> Matchup vs Enemy:
-                                      </p>
-                                      <div className="space-y-0.5">
-                                        {champion.counter.details.slice(0, 3).map((detail, idx) => (
-                                          <div key={idx} className="flex justify-between gap-2">
-                                            <span>vs {detail.champion}</span>
-                                            <div className="text-right">
-                                              <span
-                                                className={detail.winRateVs >= 50 ? "text-green-300" : "text-red-300"}
-                                              >
+                                    {champion.laneCounter?.isLaneCounter && champion.laneCounter.details.length > 0 && (
+                                      <div className="border-t border-red-800/60 pt-2.5 mt-2.5">
+                                        <p className="text-sm text-purple-400 font-semibold mb-1.5 flex items-center gap-1.5">
+                                          <Swords className="h-4 w-4" /> Lane Counter:
+                                        </p>
+                                        <div className="space-y-1">
+                                          {champion.laneCounter.details.slice(0, 2).map((detail, idx) => (
+                                            <div key={idx} className="flex justify-between gap-2">
+                                              <span className="text-gray-400">
+                                                vs {detail.champion} ({detail.position?.toUpperCase()})
+                                              </span>
+                                              <span className="text-purple-300 font-semibold">
                                                 {detail.winRateVs.toFixed(1)}% WR
                                               </span>
-                                              <span className="text-gray-500 mx-1">|</span>
-                                              <span className="text-blue-300">{detail.pickRateVs.toFixed(1)}% PR</span>
                                             </div>
-                                          </div>
-                                        ))}
+                                          ))}
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
-                                  {/* Overall Stats */}
-                                  {(typeof champion.winRate === "number" || typeof champion.pickRate === "number") && (
-                                    <div className="border-t border-gray-600 pt-2">
-                                      <p className="text-xs text-gray-400 font-semibold mb-1">Overall Stats:</p>
-                                      {typeof champion.winRate === "number" && (
-                                        <div className="flex justify-between gap-2">
-                                          <span>Win Rate:</span> <span>{champion.winRate.toFixed(1)}%</span>
+                                    )}
+                                    {champion.teamCounter?.isTeamCounter && champion.teamCounter.details.length > 0 && (
+                                      <div className="border-t border-red-800/60 pt-2.5 mt-2.5">
+                                        <p className="text-sm text-orange-400 font-semibold mb-1.5 flex items-center gap-1.5">
+                                          <Swords className="h-4 w-4" /> Team Counter:
+                                        </p>
+                                        <div className="space-y-1">
+                                          {champion.teamCounter.details.slice(0, 2).map((detail, idx) => (
+                                            <div key={idx} className="flex justify-between gap-2">
+                                              <span className="text-gray-400">
+                                                vs {detail.champion} ({detail.position?.toUpperCase()})
+                                              </span>
+                                              <span className="text-orange-300 font-semibold">
+                                                {detail.winRateVs.toFixed(1)}% WR
+                                              </span>
+                                            </div>
+                                          ))}
                                         </div>
-                                      )}
-                                      {typeof champion.pickRate === "number" && (
-                                        <div className="flex justify-between gap-2">
-                                          <span>Pick Rate:</span> <span>{champion.pickRate.toFixed(1)}%</span>
-                                        </div>
-                                      )}
-                                      {typeof champion.banRate === "number" && (
-                                        <div className="flex justify-between gap-2">
-                                          <span>Ban Rate:</span> <span>{champion.banRate.toFixed(1)}%</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Draft Position Context */}
-                                  {champion.draftPos?.context && (
-                                    <p className="text-blue-300 text-xs mt-2 italic">
-                                      {champion.draftPos.context} ({champion.draftPos.pickRateInSlot?.toFixed(1)}% rate)
-                                    </p>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )
-                      })}
-                      {recommendedChampions.length === 0 && (
-                        <p className="text-gray-400 col-span-full text-center py-6">
-                          No recommendations available for the current state and filters.
-                        </p>
-                      )}
+                                      </div>
+                                    )}
+                                    {(typeof champion.winRate === "number" || typeof champion.pickRate === "number") && (
+                                      <div className="border-t border-red-800/60 pt-2.5 mt-2.5">
+                                        <p className="text-sm text-red-300 font-semibold mb-1.5">Overall Stats:</p>
+                                        {typeof champion.winRate === "number" && (
+                                          <div className="flex justify-between gap-2 text-gray-400">
+                                            <span>Win Rate:</span> <span className="font-semibold text-white">{champion.winRate.toFixed(1)}%</span>
+                                          </div>
+                                        )}
+                                        {typeof champion.pickRate === "number" && (
+                                          <div className="flex justify-between gap-2 text-gray-400">
+                                            <span>Pick Rate:</span> <span className="font-semibold text-white">{champion.pickRate.toFixed(1)}%</span>
+                                          </div>
+                                        )}
+                                        {typeof champion.banRate === "number" && (
+                                          <div className="flex justify-between gap-2 text-gray-400">
+                                            <span>Ban Rate:</span> <span className="font-semibold text-white">{champion.banRate.toFixed(1)}%</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {champion.draftPos?.context && (
+                                      <p className="text-sky-300 text-xs mt-2.5 italic">
+                                        {champion.draftPos.context} ({champion.draftPos.pickRateInSlot?.toFixed(1)}% rate)
+                                      </p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
+                        })}
+                        {recommendedChampions.length === 0 && (
+                          <p className="text-gray-400 col-span-full text-center py-8 text-lg">
+                            No recommendations for current state/filters.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
               </div>
             )}
 
-            {/* Draft Complete Message */}
             {isDraftComplete && (
               <div className="text-center py-10">
-                <h3 className="text-2xl font-semibold mb-3 text-green-400">Draft Complete!</h3>
-                <p className="text-gray-400 mb-6">Review the final teams or start a new draft.</p>
+                <h3 className="text-3xl font-bold mb-4 text-green-400">Draft Complete!</h3>
+                <p className="text-gray-300 mb-8 text-lg">Review the final teams or start a new draft.</p>
                 <Button
-                  variant="outline"
                   size="lg"
-                  className="bg-green-700 text-white border-green-600 hover:bg-green-600"
+                  className="bg-red-600 text-white border-red-700 hover:bg-red-700 hover:border-red-500 rounded-md shadow-lg hover:shadow-xl transition-all duration-150 px-8 py-3 text-base"
                   onClick={resetDraft}
                 >
-                  <RefreshCw className="h-5 w-5 mr-2" /> New Draft
+                  <RefreshCw className="h-5 w-5 mr-2.5" /> New Draft
                 </Button>
               </div>
             )}
           </div>
 
           {/* === Red Team Column (Right) === */}
-          <div className="lg:w-[240px] xl:w-[280px] shrink-0 bg-red-900/10 border border-red-700/30 rounded-lg p-3 space-y-3 order-3">
-            <h3 className="text-lg font-semibold text-red-400 text-center border-b border-red-700/30 pb-2">Red Side</h3>
+          <div className="lg:w-[260px] xl:w-[300px] shrink-0 bg-gray-950 border border-red-700/50 rounded-lg p-3 space-y-3 order-3 shadow-lg">
+            <h3 className="text-xl font-bold text-white text-center bg-red-600 py-2 rounded-t-md -mx-3 -mt-3 mb-3 border-b border-red-400/50">
+              Red Side
+            </h3>
             {/* Red Bans */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
-                <Ban className="h-3 w-3" /> Bans
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <Ban className="h-4 w-4 text-red-400" /> Bans
               </h4>
-              <div className="flex justify-center gap-2 flex-wrap bg-black/20 p-2 rounded">
+              <div className="flex justify-center gap-2 flex-wrap bg-black/30 p-2 rounded-md border border-gray-700/50">
                 {draftState.redBans.map((ban, index) => {
                   const isCurrentBan =
                     currentDraftPosition?.phase === "ban" &&
@@ -1246,30 +1331,30 @@ export default function DraftSimulator({
                   return (
                     <div
                       key={`red-ban-${index}`}
-                      className={cn(
-                        `w-10 h-10 rounded-sm flex items-center justify-center shrink-0 relative overflow-hidden border`,
-                        ban ? "bg-gray-800 border-gray-600" : "bg-gray-800/50 border-dashed border-gray-700",
-                        isCurrentBan && "border-2 border-yellow-400 ring-2 ring-yellow-400/50 shadow-lg",
+                       className={cn(
+                        `w-11 h-11 rounded-md flex items-center justify-center shrink-0 relative overflow-hidden border-2 transition-all duration-150`,
+                        ban ? "bg-gray-800 border-gray-600" : "bg-gray-800/60 border-dashed border-gray-700",
+                        isCurrentBan && "border-yellow-400 ring-2 ring-yellow-400/70 shadow-lg shadow-yellow-500/30 scale-105",
                       )}
                     >
                       {ban ? (
-                        <TooltipProvider>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative group">
-                                <ChampionImage championName={ban} size={40} />
-                                <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-100">
-                                  <X className="h-5 w-5 text-red-500" />
+                              <div className="relative group w-full h-full">
+                                <ChampionImage championName={ban} size={44} className="object-cover w-full h-full"/>
+                                <div className="absolute inset-0 bg-black/75 flex items-center justify-center opacity-100">
+                                  <X className="h-6 w-6 text-red-500" />
                                 </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-black text-white border-gray-700">
-                              <p>{ban} (Banned)</p>
+                            <TooltipContent className="bg-black text-white border border-gray-700 rounded-md shadow-lg">
+                              <p className="font-semibold">{ban} (Banned)</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <span className="text-[10px] text-gray-500">R{index + 1}</span>
+                        <span className="text-xs text-gray-500">R{index + 1}</span>
                       )}
                     </div>
                   )
@@ -1277,8 +1362,8 @@ export default function DraftSimulator({
               </div>
             </div>
             {/* Red Picks */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider text-center pt-1">Picks</h4>
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider text-center pt-1">Picks</h4>
               {Array.from({ length: 5 }).map((_, index) => {
                 const pick = draftState.redPicks[index]
                 const isActivePick =
@@ -1289,87 +1374,79 @@ export default function DraftSimulator({
                 return (
                   <div
                     key={`red-pick-${index}`}
-                    className={cn(
-                      "flex items-center gap-2 p-1.5 rounded-md transition-colors duration-200 h-[60px]", // Consistent height
-                      pick.champion ? "bg-gradient-to-l from-red-900/40 to-transparent" : "bg-black/20",
+                     className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg transition-all duration-200 h-[68px] border-2", 
+                      pick.champion ? "bg-gradient-to-l from-red-900/50 via-gray-900/30 to-gray-900/20" : "bg-black/30 border-gray-700/50",
                       isActivePick
-                        ? "bg-red-600/30 border border-red-400 shadow-inner shadow-red-500/30"
-                        : "border border-transparent",
+                        ? "border-red-500 shadow-lg shadow-red-500/30 scale-[1.02]"
+                        : pick.champion ? "border-red-700/60" : "border-gray-700/50",
                     )}
                   >
-                    {/* Info first for Red side */}
-                    <div className="flex-grow min-w-0 space-y-0.5 text-right">
+                    <div className="flex-grow min-w-0 space-y-1 text-right">
                       {pick.champion ? (
                         <>
-                          <p className="text-[13px] font-medium truncate text-white leading-tight">{pick.champion}</p>
-                          {/* --- Role Select --- */}
-                          <div className="flex items-center justify-end gap-1">
-                            {" "}
-                            {/* Align items to end */}
+                          <p className="text-sm font-semibold truncate text-white leading-tight">{pick.champion}</p>
+                          <div className="flex items-center justify-end">
                             <Select
                               value={pick.position || ""}
                               onValueChange={(value) => handlePositionChange("red", index, value)}
                               disabled={!pick.champion}
                             >
                               <SelectTrigger
-                                className={cn(
-                                  "h-6 text-[10px] w-[80px] rounded-sm focus:ring-1 focus:ring-red-400 focus:ring-offset-0 flex items-center justify-end gap-1 pr-1.5 pl-1", // Right align trigger content
+                                 className={cn(
+                                  "h-7 text-xs w-full max-w-[90px] rounded-md focus:ring-2 focus:ring-red-500 focus:ring-offset-0 focus:ring-offset-black flex items-center justify-end gap-1.5 pr-2 pl-1 shadow",
                                   pick.champion
-                                    ? "bg-gray-800/80 border-gray-700/80"
-                                    : "bg-gray-700/50 border-gray-600/50 text-gray-500",
+                                    ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700/70"
+                                    : "bg-gray-700/60 border-gray-600/60 text-gray-500",
                                 )}
                               >
-                                {/* Icon comes after value for right alignment */}
                                 <SelectValue placeholder="Role" className="mr-1" />
-                                <ArrowUpDown className="h-3 w-3 text-gray-400 shrink-0" />
+                                <ArrowUpDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                               </SelectTrigger>
-                              <SelectContent className="bg-gray-900 border-gray-700 text-white min-w-[80px]">
+                              <SelectContent className="bg-gray-900 border-gray-700 text-white min-w-[90px] shadow-xl rounded-md">
                                 {STANDARD_POSITIONS.map((pos) => (
-                                  <SelectItem key={`red-pos-${index}-${pos}`} value={pos} className="text-xs">
+                                  <SelectItem key={`red-pos-${index}-${pos}`} value={pos} className="text-xs hover:bg-red-600 focus:bg-red-600">
                                     {pos.toUpperCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          {/* --- End Role Select --- */}
                         </>
                       ) : (
-                        <p className="text-xs text-gray-500 italic h-10 flex items-center justify-end">Selecting...</p>
+                        <p className="text-sm text-gray-500 italic h-10 flex items-center justify-end">Waiting...</p>
                       )}
                     </div>
-                    {/* Image last for Red side */}
                     <div
                       className={cn(
-                        "w-11 h-11 rounded-sm flex items-center justify-center shrink-0 relative overflow-hidden border",
-                        pick.champion ? "bg-gray-800 border-gray-600" : "bg-gray-800/50 border-dashed border-gray-700",
+                        "w-12 h-12 rounded-md flex items-center justify-center shrink-0 relative overflow-hidden border-2",
+                        pick.champion ? "bg-gray-800 border-gray-600" : "bg-gray-800/60 border-dashed border-gray-700",
                       )}
                     >
                       {pick.champion ? (
-                        <TooltipProvider>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative group">
-                                <ChampionImage championName={pick.champion} size={44} />
-                                {/* Show Role Badge on Pick Image */}
+                              <div className="relative group w-full h-full">
+                                <ChampionImage championName={pick.champion} size={48} className="object-cover w-full h-full"/>
                                 {pick.position && (
                                   <Badge
-                                    variant="outline"
-                                    className="absolute -bottom-1 -left-1 bg-black/75 border-gray-600/80 text-white text-[9px] px-1 py-0 pointer-events-none leading-tight"
+                                    variant="secondary"
+                                    className="absolute -bottom-1.5 -left-1.5 bg-black/80 border border-gray-500 text-white text-[10px] px-1.5 py-0.5 pointer-events-none leading-tight font-semibold rounded-sm shadow-md"
                                   >
                                     {pick.position.toUpperCase()}
                                   </Badge>
                                 )}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-black text-white border-gray-700">
-                              <p>{pick.champion}</p>
+                            <TooltipContent className="bg-black text-white border border-gray-700 rounded-md shadow-lg">
+                              <p className="font-semibold">{pick.champion}</p>
                               {pick.position && <p className="text-xs text-gray-400">{pick.position.toUpperCase()}</p>}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <span className="text-[10px] text-gray-500">R{index + 1}</span>
+                        <span className="text-xs text-gray-500">R{index + 1}</span>
                       )}
                     </div>
                   </div>
@@ -1377,8 +1454,7 @@ export default function DraftSimulator({
               })}
             </div>
           </div>
-        </div>{" "}
-        {/* End Main Layout Flex Container */}
+        </div>
       </CardContent>
     </Card>
   )
