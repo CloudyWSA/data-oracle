@@ -1,0 +1,102 @@
+.league-spinner-container {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    background-color: #000000;
+  }
+  
+  .league-spinner-container .square {
+    width: 30px;
+    height: 30px;
+    rotate: 45deg;
+    border: solid #DC2626 2px;
+    animation: jitter 1.5s ease-in-out infinite;
+    background-color: #000000;
+  }
+  
+  .league-spinner-container .circle {
+    width: 60px;
+    height: 60px;
+    border: dashed #DC2626 2px;
+    border-radius: 50%;
+    animation: smooth 10s linear infinite;
+  }
+  
+  .league-spinner-container .centered {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+  }
+  
+  .league-spinner-container .diamond {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: 0 -50%;
+  }
+  
+  .league-spinner-container .diamond.small {
+    width: 30px;
+    height: 30px;
+    stroke-dasharray: 100;
+    stroke-width: 2px;
+    animation: disappear-small 3s ease-in-out infinite;
+  }
+  
+  .league-spinner-container .diamond.large {
+    width: 60px;
+    height: 60px;
+    stroke-dasharray: 200;
+    stroke-width: 1px;
+    animation: disappear-large 3s ease-in-out infinite;
+  }
+  
+  .league-spinner-container .path {
+    stroke: #DC2626;
+    fill: none;
+  }
+  
+  .league-spinner-container .rotated {
+    transform-origin: left;
+    rotate: 180deg;
+  }
+  
+  @keyframes jitter {
+    0% {
+      rotate: 45deg;
+    }
+    33% {
+      rotate: 135deg;
+    }
+    100% {
+      rotate: 135deg;
+    }
+  }
+  
+  @keyframes smooth {
+    from {
+      rotate: 0deg;
+    }
+    to {
+      rotate: 360deg;
+    }
+  }
+  
+  @keyframes disappear-small {
+    0% {
+      stroke-dashoffset: 100;
+    }
+    100% {
+      stroke-dashoffset: -100;
+    }
+  }
+  
+  @keyframes disappear-large {
+    0% {
+      stroke-dashoffset: 200;
+    }
+    100% {
+      stroke-dashoffset: -200;
+    }
+  }
